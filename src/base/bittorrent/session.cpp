@@ -4697,6 +4697,9 @@ void Session::handleAlert(const lt::alert *a)
         case lt::socks5_alert::alert_type:
             handleSocks5Alert(static_cast<const lt::socks5_alert *>(a));
             break;
+        case lt::session_stats_header_alert::alert_type:
+            LogMsg(QString::fromStdString((static_cast<const lt::session_stats_header_alert *>(a)->message())), Log::INFO);
+            break;
         }
     }
     catch (const std::exception &exc)
@@ -5020,6 +5023,7 @@ void Session::handleExternalIPAlert(const lt::external_ip_alert *p)
 
 void Session::handleSessionStatsAlert(const lt::session_stats_alert *p)
 {
+    LogMsg(QString::fromStdString(p->message()), Log::INFO);
     const qreal interval = lt::total_milliseconds(p->timestamp() - m_statsLastTimestamp) / 1000.;
     m_statsLastTimestamp = p->timestamp();
 

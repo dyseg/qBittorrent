@@ -31,7 +31,8 @@ window.qBittorrent.Download = (function() {
     const exports = function() {
         return {
             changeCategorySelect: changeCategorySelect,
-            changeTMM: changeTMM
+            changeTMM: changeTMM,
+            changeUseDownloadPath: changeUseDownloadPath
         };
     };
 
@@ -63,8 +64,14 @@ window.qBittorrent.Download = (function() {
 
         defaultSavePath = pref.save_path;
         $('savepath').setProperty('value', defaultSavePath);
+        $('downloadPath').setProperty('value', pref.temp_path);
         $('startTorrent').checked = !pref.start_paused_enabled;
         $('addToTopOfQueue').checked = pref.add_to_top_of_queue;
+
+        if (pref.temp_path_enabled == 1) {
+            $('useDownloadPath').checked = true;
+            $('downloadPath').disabled = false;
+        }
 
         if (pref.auto_tmm_enabled == 1) {
             $('autoTMM').selectedIndex = 1;
@@ -133,6 +140,10 @@ window.qBittorrent.Download = (function() {
             $('savepath').disabled = false;
             $('savepath').value = defaultSavePath;
         }
+    };
+
+    const changeUseDownloadPath = function(item) {
+        $('downloadPath').disabled = !item.checked;
     };
 
     $(window).addEventListener("load", function() {

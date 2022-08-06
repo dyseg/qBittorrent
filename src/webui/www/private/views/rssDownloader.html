@@ -226,6 +226,20 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
                     </td>
                 </tr>
             </table>
+            <div class="formRow">
+                <input disabled type="checkbox" id="useDownloadPath" />
+                <label for="useDownloadPath">QBT_TR(Download to a temp Directory)QBT_TR[CONTEXT=AutomatedRssDownloader]</label>
+            </div>
+            <table class="fullWidth">
+                <tr>
+                    <td>
+                        <label class="noWrap" for="downloadPath">QBT_TR(Temp directory:)QBT_TR[CONTEXT=AutomatedRssDownloader]</label>
+                    </td>
+                    <td class="fullWidth">
+                        <input disabled type="text" class="fullWidth" id="downloadPath" autocorrect="off" autocapitalize="none" />
+                    </td>
+                </tr>
+            </table>
             <table>
                 <tr>
                     <td><label for="ignoreDaysValue">QBT_TR(Ignore Subsequent Matches for (0 to Disable))QBT_TR[CONTEXT=AutomatedRssDownloader]</label></td>
@@ -462,6 +476,9 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
             $('savetoDifferentDir').addEvent('click', () => {
                 $('saveToText').disabled = !$('savetoDifferentDir').checked;
             });
+            $('useDownloadPath').addEvent('click', () => {
+                $('downloadPath').disabled = !$('useDownloadPath').checked;
+            });
             updateRulesList();
         };
 
@@ -579,6 +596,8 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
             rulesList[rule].smartFilter = $('useSmartFilter').checked;
             rulesList[rule].assignedCategory = $('assignCategoryCombobox').value;
             rulesList[rule].savePath = $('savetoDifferentDir').checked ? $('saveToText').value : '';
+            rulesList[rule].useDownloadPath = $('useDownloadPath').checked;
+            rulesList[rule].downloadPath = $('downloadPath').value;
             rulesList[rule].ignoreDays = parseInt($('ignoreDaysValue').value);
 
             switch ($('addPausedCombobox').value) {
@@ -703,6 +722,9 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
                 $('assignCategoryCombobox').disabled = false;
                 $('savetoDifferentDir').disabled = false;
                 $('savetoDifferentDir').checked = rulesList[ruleName].savePath ? false : true;
+                $('useDownloadPath').disabled = false;
+                $('useDownloadPath').checked = rulesList[ruleName].useDownloadPath;
+                $('downloadPath').disabled = !rulesList[ruleName].useDownloadPath;
                 $('saveToText').disabled = rulesList[ruleName].savePath ? false : true;
                 $('ignoreDaysValue').disabled = false;
                 $('addPausedCombobox').disabled = false;
@@ -714,6 +736,7 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
                 $('mustNotContainText').value = rulesList[ruleName].mustNotContain;
                 $('episodeFilterText').value = rulesList[ruleName].episodeFilter;
                 $('useSmartFilter').checked = rulesList[ruleName].smartFilter;
+                $('downloadPath').value = rulesList[ruleName].downloadPath;
 
                 $('assignCategoryCombobox').value = rulesList[ruleName].assignedCategory ? rulesList[ruleName].assignedCategory : 'default';
                 $('savetoDifferentDir').checked = rulesList[ruleName].savePath !== '';

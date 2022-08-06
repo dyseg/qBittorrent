@@ -83,6 +83,10 @@ namespace RSS
 
         Path savePath() const;
         void setSavePath(const Path &savePath);
+        Path downloadPath() const;
+        void setDownloadPath(const Path &downloadPath);
+        std::optional<bool> useDownloadPath() const;
+        void setUseDownloadPath(std::optional<bool> useDownloadPath);
         std::optional<bool> addPaused() const;
         void setAddPaused(std::optional<bool> addPaused);
         std::optional<BitTorrent::TorrentContentLayout> torrentContentLayout() const;

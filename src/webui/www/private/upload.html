@@ -39,6 +39,22 @@
                 </tr>
                 <tr>
                     <td>
+                        <label for="useDownloadPath">QBT_TR(Use another path for incomplete torrent)QBT_TR[CONTEXT=AddNewTorrentDialog]</label>
+                    </td>
+                    <td>
+                        <input type="checkbox" id="useDownloadPath" name="useDownloadPath" value="true" onchange="qBittorrent.Download.changeUseDownloadPath(this)" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="downloadPath">QBT_TR(Use another path for incomplete torrent:)QBT_TR[CONTEXT=HttpServer]</label>
+                    </td>
+                    <td>
+                        <input type="text" id="downloadPath" name="downloadPath" style="width: 16em;" disabled />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
                         <label for="rename">QBT_TR(Rename torrent)QBT_TR[CONTEXT=HttpServer]</label>
                     </td>
                     <td>

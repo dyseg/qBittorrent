@@ -266,6 +266,30 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
            </layout>
           </item>
           <item>
+           <widget class="QCheckBox" name="checkBoxUseDownloadPath">
+            <property name="text">
+             <string>Download to a temp Directory</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_6">
+            <item>
+             <widget class="QLabel" name="lblDownloadPath">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Temp dir:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="FileSystemPathLineEdit" name="lineDownloadPath" native="true"/>
+            </item>
+           </layout>
+          </item>
+          <item>
            <layout class="QHBoxLayout" name="horizontalLayout_8">
             <item>
              <widget class="QLabel" name="lblIgnoreDays">
@@ -494,6 +518,8 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
   <tabstop>comboCategory</tabstop>
   <tabstop>checkBoxSaveDiffDir</tabstop>
   <tabstop>lineSavePath</tabstop>
+  <tabstop>checkBoxUseDownloadPath</tabstop>
+  <tabstop>lineDownloadPath</tabstop>
   <tabstop>spinIgnorePeriod</tabstop>
   <tabstop>comboAddPaused</tabstop>
   <tabstop>comboContentLayout</tabstop>
@@ -567,6 +593,18 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
      <y>204</y>
     </hint>
    </hints>
+  </connection>
+    <connection>
+   <sender>checkBoxUseDownloadPath</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>lblDownloadPath</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>checkBoxUseDownloadPath</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>lineDownloadPath</receiver>
+   <slot>setEnabled(bool)</slot>
   </connection>
  </connections>
 </ui>

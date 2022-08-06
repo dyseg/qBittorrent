@@ -90,6 +90,8 @@ AutomatedRssDownloader::AutomatedRssDownloader(QWidget *parent)
     m_ui->hsplitter->setCollapsible(2, true); // Only the preview list is collapsible
     m_ui->lineSavePath->setDialogCaption(tr("Destination directory"));
     m_ui->lineSavePath->setMode(FileSystemPathEdit::Mode::DirectorySave);
+    m_ui->lineDownloadPath->setDialogCaption(tr("Temp directory"));
+    m_ui->lineDownloadPath->setMode(FileSystemPathEdit::Mode::DirectorySave);
 
     connect(m_ui->checkRegex, &QAbstractButton::toggled, this, &AutomatedRssDownloader::updateFieldsToolTips);
     connect(m_ui->listRules, &QWidget::customContextMenuRequested, this, &AutomatedRssDownloader::displayRulesListMenu);
@@ -277,7 +279,9 @@ void AutomatedRssDownloader::updateRuleDefinitionBox()
         else
             m_ui->lineEFilter->clear();
         m_ui->checkBoxSaveDiffDir->setChecked(!m_currentRule.savePath().isEmpty());
+        m_ui->checkBoxUseDownloadPath->setChecked(m_currentRule.useDownloadPath().value_or(false));
         m_ui->lineSavePath->setSelectedPath(m_currentRule.savePath());
+        m_ui->lineDownloadPath->setSelectedPath(m_currentRule.downloadPath());
         m_ui->checkRegex->blockSignals(true);
         m_ui->checkRegex->setChecked(m_currentRule.useRegex());
         m_ui->checkRegex->blockSignals(false);
@@ -327,7 +331,9 @@ void AutomatedRssDownloader::clearRuleDefinitionBox()
     m_ui->lineNotContains->clear();
     m_ui->lineEFilter->clear();
     m_ui->checkBoxSaveDiffDir->setChecked(false);
+    m_ui->checkBoxUseDownloadPath->setChecked(false);
     m_ui->lineSavePath->clear();
+    m_ui->lineDownloadPath->clear();	
     m_ui->comboCategory->clearEditText();
     m_ui->comboCategory->setCurrentIndex(-1);
     m_ui->checkRegex->setChecked(false);
@@ -363,6 +369,8 @@ void AutomatedRssDownloader::updateEditedRule()
     m_currentRule.setMustNotContain(m_ui->lineNotContains->text());
     m_currentRule.setEpisodeFilter(m_ui->lineEFilter->text());
     m_currentRule.setSavePath(m_ui->checkBoxSaveDiffDir->isChecked() ? m_ui->lineSavePath->selectedPath() : Path());
+    m_currentRule.setDownloadPath(m_ui->lineDownloadPath->selectedPath());
+    m_currentRule.setUseDownloadPath(m_ui->checkBoxUseDownloadPath->isChecked());
     m_currentRule.setCategory(m_ui->comboCategory->currentText());
     std::optional<bool> addPaused;
     if (m_ui->comboAddPaused->currentIndex() == 1)

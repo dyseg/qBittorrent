@@ -235,6 +235,20 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
                     </td>
                 </tr>
             </table>
+            <div class="formRow">
+                <input disabled type="checkbox" id="useDownloadPath" />
+                <label for="useDownloadPath">QBT_TR(Download to a temp Directory)QBT_TR[CONTEXT=AutomatedRssDownloader]</label>
+            </div>
+            <table class="fullWidth">
+                <tr>
+                    <td>
+                        <label class="noWrap" for="downloadPath">QBT_TR(Temp directory:)QBT_TR[CONTEXT=AutomatedRssDownloader]</label>
+                    </td>
+                    <td class="fullWidth">
+                        <input disabled type="text" class="fullWidth" id="downloadPath" autocorrect="off" autocapitalize="none" />
+                    </td>
+                </tr>
+            </table>
             <table>
                 <tr>
                     <td><label for="ignoreDaysValue">QBT_TR(Ignore Subsequent Matches for (0 to Disable))QBT_TR[CONTEXT=AutomatedRssDownloader]</label></td>
@@ -471,6 +485,9 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
             $('savetoDifferentDir').addEvent('click', () => {
                 $('saveToText').disabled = !$('savetoDifferentDir').checked;
             });
+            $('useDownloadPath').addEvent('click', () => {
+                $('downloadPath').disabled = !$('useDownloadPath').checked;
+            });
             updateRulesList();
         };
 
@@ -586,6 +603,8 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
             rulesList[rule].mustNotContain = $('mustNotContainText').value;
             rulesList[rule].episodeFilter = $('episodeFilterText').value;
             rulesList[rule].smartFilter = $('useSmartFilter').checked;
+            rulesList[rule].torrentParams.use_download_path = $('useDownloadPath').checked;
+            rulesList[rule].torrentParams.download_path = $('downloadPath').value;
             rulesList[rule].ignoreDays = parseInt($('ignoreDaysValue').value);
             rulesList[rule].affectedFeeds = rssDownloaderFeedSelectionTable.rows.filter((row) => row.full_data.checked)
                 .map((row) => row.full_data.url)
@@ -718,6 +737,9 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
                 $('assignCategoryCombobox').disabled = false;
                 $('ruleAddTags').disabled = false;
                 $('savetoDifferentDir').disabled = false;
+                $('useDownloadPath').disabled = false;
+                $('useDownloadPath').checked = rulesList[ruleName].torrentParams.download_path;
+                $('downloadPath').disabled = !rulesList[ruleName].torrentParams.use_download_path;
                 $('ignoreDaysValue').disabled = false;
                 $('addPausedCombobox').disabled = false;
                 $('contentLayoutCombobox').disabled = false;
@@ -728,6 +750,7 @@ Supports the formats: S01E01, 1x1, 2017.12.31 and 31.12.2017 (Date formats also 
                 $('mustNotContainText').value = rulesList[ruleName].mustNotContain;
                 $('episodeFilterText').value = rulesList[ruleName].episodeFilter;
                 $('useSmartFilter').checked = rulesList[ruleName].smartFilter;
+                $('downloadPath').value = rulesList[ruleName].torrentParams.download_path;
 
                 $('assignCategoryCombobox').value = rulesList[ruleName].torrentParams.category ? rulesList[ruleName].torrentParams.category : 'default';
                 $('ruleAddTags').value = rulesList[ruleName].torrentParams.tags.join(',');

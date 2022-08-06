@@ -109,10 +109,12 @@ const QString Str_MustNotContain = u"mustNotContain"_qs;
 const QString Str_EpisodeFilter = u"episodeFilter"_qs;
 const QString Str_AffectedFeeds = u"affectedFeeds"_qs;
 const QString Str_SavePath = u"savePath"_qs;
+const QString Str_DownloadPath = u"downloadPath"_qs;
 const QString Str_AssignedCategory = u"assignedCategory"_qs;
 const QString Str_LastMatch = u"lastMatch"_qs;
 const QString Str_IgnoreDays = u"ignoreDays"_qs;
 const QString Str_AddPaused = u"addPaused"_qs;
+const QString Str_UseDownloadPath= u"useDownloadPath"_qs;
 const QString Str_CreateSubfolder = u"createSubfolder"_qs;
 const QString Str_ContentLayout = u"torrentContentLayout"_qs;
 const QString Str_SmartFilter = u"smartFilter"_qs;
@@ -134,8 +136,10 @@ namespace RSS
         QDateTime lastMatch;
 
         Path savePath;
+        Path downloadPath;
         QString category;
         std::optional<bool> addPaused;
+        std::optional<bool> useDownloadPath;
         std::optional<BitTorrent::TorrentContentLayout> contentLayout;
 
         bool smartFilter = false;
@@ -156,8 +160,10 @@ namespace RSS
                     && (left.ignoreDays == right.ignoreDays)
                     && (left.lastMatch == right.lastMatch)
                     && (left.savePath == right.savePath)
+                    && (left.downloadPath == right.downloadPath)
                     && (left.category == right.category)
                     && (left.addPaused == right.addPaused)
+                    && (left.useDownloadPath == right.useDownloadPath)
                     && (left.contentLayout == right.contentLayout)
                     && (left.smartFilter == right.smartFilter);
         }
@@ -468,10 +474,12 @@ QJsonObject AutoDownloadRule::toJsonObject() const
         , {Str_EpisodeFilter, episodeFilter()}
         , {Str_AffectedFeeds, QJsonArray::fromStringList(feedURLs())}
         , {Str_SavePath, savePath().toString()}
+        , {Str_DownloadPath, downloadPath().toString()}
         , {Str_AssignedCategory, assignedCategory()}
         , {Str_LastMatch, lastMatch().toString(Qt::RFC2822Date)}
         , {Str_IgnoreDays, ignoreDays()}
         , {Str_AddPaused, toJsonValue(addPaused())}
+        , {Str_UseDownloadPath, toJsonValue(useDownloadPath())}
         , {Str_ContentLayout, contentLayoutToJsonValue(torrentContentLayout())}
         , {Str_SmartFilter, useSmartFilter()}
         , {Str_PreviouslyMatched, QJsonArray::fromStringList(previouslyMatchedEpisodes())}};
@@ -487,8 +495,10 @@ AutoDownloadRule AutoDownloadRule::fromJsonObject(const QJsonObject &jsonObj, co
     rule.setEpisodeFilter(jsonObj.value(Str_EpisodeFilter).toString());
     rule.setEnabled(jsonObj.value(Str_Enabled).toBool(true));
     rule.setSavePath(Path(jsonObj.value(Str_SavePath).toString()));
+    rule.setDownloadPath(Path(jsonObj.value(Str_DownloadPath).toString()));
     rule.setCategory(jsonObj.value(Str_AssignedCategory).toString());
     rule.setAddPaused(toOptionalBool(jsonObj.value(Str_AddPaused)));
+    rule.setUseDownloadPath(toOptionalBool(jsonObj.value(Str_UseDownloadPath)));
 
     // TODO: The following code is deprecated. Replace with the commented one after several releases in 4.4.x.
     // === BEGIN DEPRECATED CODE === //
@@ -548,6 +558,7 @@ QVariantHash AutoDownloadRule::toLegacyDict() const
         {u"must_contain"_qs, mustContain()},
         {u"must_not_contain"_qs, mustNotContain()},
         {u"save_path"_qs, savePath().toString()},
+        {u"downloadPath"_qs, downloadPath().toString()},
         {u"affected_feeds"_qs, feedURLs()},
         {u"enabled"_qs, isEnabled()},
         {u"category_assigned"_qs, assignedCategory()},
@@ -569,6 +580,7 @@ AutoDownloadRule AutoDownloadRule::fromLegacyDict(const QVariantHash &dict)
     rule.setFeedURLs(dict.value(u"affected_feeds"_qs).toStringList());
     rule.setEnabled(dict.value(u"enabled"_qs, false).toBool());
     rule.setSavePath(Path(dict.value(u"save_path"_qs).toString()));
+    rule.setDownloadPath(Path(dict.value(u"downloadPath"_qs).toString()));
     rule.setCategory(dict.value(u"category_assigned"_qs).toString());
     rule.setAddPaused(addPausedLegacyToOptionalBool(dict.value(u"add_paused"_qs).toInt()));
     rule.setLastMatch(dict.value(u"last_match"_qs).toDateTime());
@@ -630,9 +642,19 @@ Path AutoDownloadRule::savePath() const
     return m_dataPtr->savePath;
 }
 
+Path AutoDownloadRule::downloadPath() const
+{
+    return m_dataPtr->downloadPath;
+}
+
 void AutoDownloadRule::setSavePath(const Path &savePath)
 {
     m_dataPtr->savePath = savePath;
+}
+
+void AutoDownloadRule::setDownloadPath(const Path &downloadPath)
+{
+    m_dataPtr->downloadPath = downloadPath;
 }
 
 std::optional<bool> AutoDownloadRule::addPaused() const
@@ -640,9 +662,19 @@ std::optional<bool> AutoDownloadRule::addPaused() const
     return m_dataPtr->addPaused;
 }
 
+std::optional<bool> AutoDownloadRule::useDownloadPath() const
+{
+    return m_dataPtr->useDownloadPath;
+}
+
 void AutoDownloadRule::setAddPaused(const std::optional<bool> addPaused)
 {
     m_dataPtr->addPaused = addPaused;
+}
+
+void AutoDownloadRule::setUseDownloadPath(const std::optional<bool> useDownloadPath)
+{
+    m_dataPtr->useDownloadPath = useDownloadPath;
 }
 
 std::optional<BitTorrent::TorrentContentLayout> AutoDownloadRule::torrentContentLayout() const

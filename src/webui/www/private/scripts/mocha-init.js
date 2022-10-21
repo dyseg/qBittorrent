@@ -582,11 +582,20 @@ const initializeWindows = function() {
         const action = "edit";
         const categoryName = category_list[categoryHash].name;
         const savePath = category_list[categoryHash].savePath;
+        var downloadPath = category_list[categoryHash].downloadPath;
+        var useDownloadPath = undefined;
+        if(downloadPath === false) {
+            downloadPath = undefined;
+            useDownloadPath = false;
+        }
+        else if(downloadPath && downloadPath.length !== 0)
+            useDownloadPath = true;
+
         new MochaUI.Window({
             id: 'editCategoryPage',
             title: "QBT_TR(Edit Category)QBT_TR[CONTEXT=TransferListWidget]",
             loadMethod: 'iframe',
-            contentURL: new URI('newcategory.html').setData("action", action).setData("categoryName", categoryName).setData("savePath", savePath).toString(),
+            contentURL: new URI('newcategory.html').setData("action", action).setData("categoryName", categoryName).setData("savePath", savePath).setData("downloadPath", downloadPath).setData("useDownloadPath", useDownloadPath).toString(),
             scrollbars: false,
             resizable: true,
             maximizable: false,

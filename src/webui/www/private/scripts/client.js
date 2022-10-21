@@ -681,11 +681,13 @@ window.addEvent('load', function() {
                             if (category_list[categoryHash] !== undefined) {
                                 // only the save path can change for existing categories
                                 category_list[categoryHash].savePath = category.savePath;
+                                category_list[categoryHash].downloadPath = category.download_path;
                             }
                             else {
                                 category_list[categoryHash] = {
                                     name: category.name,
                                     savePath: category.savePath,
+                                    downloadPath: category.download_path,
                                     torrents: []
                                 };
                             }

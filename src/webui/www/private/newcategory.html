@@ -34,6 +34,8 @@
             const uriHashes = window.qBittorrent.Misc.safeTrim(new URI().getData('hashes'));
             const uriCategoryName = window.qBittorrent.Misc.safeTrim(new URI().getData('categoryName'));
             const uriSavePath = window.qBittorrent.Misc.safeTrim(new URI().getData('savePath'));
+            const uriDownloadPathEnabled = window.qBittorrent.Misc.safeTrim(new URI().getData('useDownloadPath'));
+            const uriDownloadPath = window.qBittorrent.Misc.safeTrim(new URI().getData('downloadPath'));
 
             if (uriAction === "edit") {
                 if (!uriCategoryName)
@@ -42,6 +44,12 @@
                 $('categoryName').set('disabled', true);
                 $('categoryName').set('value', window.qBittorrent.Misc.escapeHtml(uriCategoryName));
                 $('savePath').set('value', window.qBittorrent.Misc.escapeHtml(uriSavePath));
+                $('downloadPath').set('value', window.qBittorrent.Misc.escapeHtml(uriDownloadPath));
+                const useDownloadPathRaw = window.qBittorrent.Misc.escapeHtml(uriDownloadPathEnabled);
+                if (useDownloadPathRaw == "true")
+                    $('useDownloadPath').set('value', "true");
+                else if (useDownloadPathRaw == "false")
+                    $('useDownloadPath').set('value', "false");
                 $('savePath').focus();
             }
             else {
@@ -53,6 +61,11 @@
 
                 const savePath = $('savePath').value.trim();
                 const categoryName = $('categoryName').value.trim();
+                var useDownloadPath = $('useDownloadPath').value;
+                if (useDownloadPath == "default")
+                    useDownloadPath = undefined;
+                const downloadPath = $('downloadPath').value.trim();
+
 
                 const verifyCategoryName = function(name) {
                     if ((name === null) || (name === ""))
@@ -103,7 +116,9 @@
                             method: 'post',
                             data: {
                                 category: categoryName,
-                                savePath: savePath
+                                savePath: savePath,
+                                downloadPathEnabled: useDownloadPath,
+                                downloadPath: downloadPath
                             },
                             onComplete: function() {
                                 window.parent.closeWindows();
@@ -116,7 +131,9 @@
                             method: 'post',
                             data: {
                                 category: uriCategoryName, // category name can't be changed
-                                savePath: savePath
+                                savePath: savePath,
+                                downloadPathEnabled: useDownloadPath,
+                                downloadPath: downloadPath
                             },
                             onComplete: function() {
                                 window.parent.closeWindows();
@@ -135,6 +152,13 @@
         <input type="text" id="categoryName" style="width: 99%;" />
         <p style="font-weight: bold;">QBT_TR(Save path)QBT_TR[CONTEXT=TransferListWidget]:</p>
         <input type="text" id="savePath" style="width: 99%;" />
+        <p style="font-weight: bold;">QBT_TR(Download path)QBT_TR[CONTEXT=TransferListWidget]:</p>
+        <select id="useDownloadPath" name="useDownloadPath">
+            <option selected value="default">QBT_TR(Default)QBT_TR[CONTEXT=TransferListWidget]</option>
+            <option value="true">QBT_TR(Yes)QBT_TR[CONTEXT=TransferListWidget]</option>
+            <option value="false">QBT_TR(No)QBT_TR[CONTEXT=TransferListWidget]</option>
+        </select>
+        <input type="text" id="downloadPath" style="width: 99%;" />
         <div style="text-align: center; padding-top: 10px;">
             <input type="button" value="QBT_TR(Add)QBT_TR[CONTEXT=HttpServer]" id="categoryNameButton" />
         </div>

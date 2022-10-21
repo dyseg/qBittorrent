@@ -630,18 +630,27 @@ const initializeWindows = function() {
     editCategoryFN = function(categoryHash) {
         const action = "edit";
         const category = category_list.get(categoryHash);
+        var downloadPath = category.downloadPath;
+        var useDownloadPath = undefined;
+        if (downloadPath === false) {
+            downloadPath = undefined;
+            useDownloadPath = false;
+        }
+        else if (downloadPath && downloadPath.length !== 0)
+            useDownloadPath = true;
+
         new MochaUI.Window({
             id: 'editCategoryPage',
             title: "QBT_TR(Edit Category)QBT_TR[CONTEXT=TransferListWidget]",
             loadMethod: 'iframe',
-            contentURL: new URI('newcategory.html').setData("action", action).setData("categoryName", category.name).setData("savePath", category.savePath).toString(),
+            contentURL: new URI('newcategory.html').setData("action", action).setData("categoryName", category.name).setData("savePath", category.savePath).setData("downloadPath", downloadPath).setData("useDownloadPath", useDownloadPath).toString(),
             scrollbars: false,
             resizable: true,
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
             width: 400,
-            height: 150
+            height: 210
         });
         updateMainData();
     };

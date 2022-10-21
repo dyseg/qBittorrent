@@ -722,11 +722,13 @@ window.addEventListener("DOMContentLoaded", function() {
                             if (category !== undefined) {
                                 // only the save path can change for existing categories
                                 category.savePath = responseCategory.savePath;
+                                category.downloadPath = responseCategory.download_path;
                             }
                             else {
                                 category_list.set(categoryHash, {
                                     name: responseCategory.name,
                                     savePath: responseCategory.savePath,
+                                    downloadPath: responseCategory.download_path,
                                     torrents: new Set()
                                 });
                             }

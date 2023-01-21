@@ -584,11 +584,11 @@ const initializeWindows = function() {
         const savePath = category_list[categoryHash].savePath;
         var downloadPath = category_list[categoryHash].downloadPath;
         var useDownloadPath = undefined;
-        if(downloadPath === false) {
+        if (downloadPath === false) {
             downloadPath = undefined;
             useDownloadPath = false;
         }
-        else if(downloadPath && downloadPath.length !== 0)
+        else if (downloadPath && downloadPath.length !== 0)
             useDownloadPath = true;
 
         new MochaUI.Window({

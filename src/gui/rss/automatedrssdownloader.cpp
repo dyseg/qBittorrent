@@ -325,7 +325,7 @@ void AutomatedRssDownloader::clearRuleDefinitionBox()
     m_ui->checkBoxSaveDiffDir->setChecked(false);
     m_ui->checkBoxUseDownloadPath->setChecked(false);
     m_ui->lineSavePath->clear();
-    m_ui->lineDownloadPath->clear();	
+    m_ui->lineDownloadPath->clear();
     m_ui->comboCategory->clearEditText();
     m_ui->comboCategory->setCurrentIndex(-1);
     m_ui->checkRegex->setChecked(false);

@@ -36,6 +36,9 @@
 class QString;
 
 class Path;
+#ifndef DISABLE_WEBUI
+class WebUI;
+#endif
 struct QBtCommandLineParameters;
 
 #ifdef Q_OS_WIN
@@ -82,5 +85,9 @@ public:
 #ifdef Q_OS_WIN
     virtual MemoryPriority processMemoryPriority() const = 0;
     virtual void setProcessMemoryPriority(MemoryPriority priority) = 0;
+#endif
+
+#ifndef DISABLE_WEBUI
+    virtual WebUI* getWebUI() const = 0;
 #endif
 };

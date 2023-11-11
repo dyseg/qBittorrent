@@ -1242,3 +1242,11 @@ void Application::cleanup()
         Utils::Misc::shutdownComputer(m_shutdownAct);
     }
 }
+
+
+#ifndef DISABLE_WEBUI
+WebUI* Application::getWebUI() const
+{
+    return m_webui;
+}
+#endif

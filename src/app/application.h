@@ -134,6 +134,10 @@ public:
     void setTorrentAddedNotificationsEnabled(bool value) override;
 #endif
 
+#ifndef DISABLE_WEBUI
+    WebUI* getWebUI() const override;
+#endif
+
 private slots:
     void processMessage(const QString &message);
     void torrentAdded(const BitTorrent::Torrent *torrent) const;

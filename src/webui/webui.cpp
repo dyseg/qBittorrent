@@ -46,6 +46,38 @@ WebUI::WebUI(IApplication *app)
     connect(Preferences::instance(), &Preferences::changed, this, &WebUI::configure);
 }
 
+void WebUI::reloadCert()
+{
+    const Preferences *pref = Preferences::instance();
+    if (!pref->isWebUiHttpsEnabled())
+    {
+        LogMsg(tr("Web UI: Attempt to reload certification, while HTTPS is not enabled. Ignoring..."), Log::WARNING);
+        return;
+    }
+    LogMsg(tr("RELOADING CERT!!!!!!!!!!!!!!!!!!!"), Log::INFO);
+
+    loadCert(pref);
+}
+
+void WebUI::loadCert(const Preferences *pref)
+{        
+    const auto readData = [](const Path &path) -> QByteArray
+    {
+        QFile file {path.data()};
+        if (!file.open(QIODevice::ReadOnly))
+            return {};
+        return file.read(Utils::Net::MAX_SSL_FILE_SIZE);
+    };
+    const QByteArray cert = readData(pref->getWebUIHttpsCertificatePath());
+    const QByteArray key = readData(pref->getWebUIHttpsKeyPath());
+
+    const bool success = m_httpServer->setupHttps(cert, key);
+    if (success)
+        LogMsg(tr("Web UI: HTTPS setup successful"));
+    else
+        LogMsg(tr("Web UI: HTTPS setup failed, fallback to HTTP"), Log::CRITICAL);
+}
+
 void WebUI::configure()
 {
     m_isErrored = false; // clear previous error state
@@ -83,21 +115,7 @@ void WebUI::configure()
 
         if (pref->isWebUiHttpsEnabled())
         {
-            const auto readData = [](const Path &path) -> QByteArray
-            {
-                QFile file {path.data()};
-                if (!file.open(QIODevice::ReadOnly))
-                    return {};
-                return file.read(Utils::Net::MAX_SSL_FILE_SIZE);
-            };
-            const QByteArray cert = readData(pref->getWebUIHttpsCertificatePath());
-            const QByteArray key = readData(pref->getWebUIHttpsKeyPath());
-
-            const bool success = m_httpServer->setupHttps(cert, key);
-            if (success)
-                LogMsg(tr("Web UI: HTTPS setup successful"));
-            else
-                LogMsg(tr("Web UI: HTTPS setup failed, fallback to HTTP"), Log::CRITICAL);
+            loadCert(pref);
         }
         else
         {

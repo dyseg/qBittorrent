@@ -49,6 +49,7 @@ private slots:
     void setPreferencesAction();
     void defaultSavePathAction();
     void sendTestEmailAction();
+    void reloadCertAction();
 
     void networkInterfaceListAction();
     void networkInterfaceAddressListAction();

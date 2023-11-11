@@ -44,6 +44,7 @@ namespace Net
     class DNSUpdater;
 }
 
+class Preferences;
 class WebApplication;
 
 class WebUI final : public ApplicationComponent<QObject>
@@ -52,6 +53,7 @@ class WebUI final : public ApplicationComponent<QObject>
     Q_DISABLE_COPY_MOVE(WebUI)
 
 public:
+    void reloadCert();
     explicit WebUI(IApplication *app, const QByteArray &tempPasswordHash = {});
 
     bool isEnabled() const;
@@ -69,6 +71,7 @@ private slots:
 
 private:
     void setError(const QString &message);
+    void loadCert(const Preferences *pref);
 
     bool m_isEnabled = false;
     bool m_isErrored = false;

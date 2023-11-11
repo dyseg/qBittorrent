@@ -64,6 +64,10 @@
 #include "base/version.h"
 #include "../webapplication.h"
 
+#ifndef DISABLE_WEBUI
+#include "webui/webui.h"
+#endif
+
 using namespace std::chrono_literals;
 
 void AppController::webapiVersionAction()
@@ -1175,4 +1179,9 @@ void AppController::networkInterfaceAddressListAction()
     }
 
     setResult(addressList);
+}
+
+void AppController::reloadCertAction()
+{
+    app()->webUI()->reloadCert();
 }

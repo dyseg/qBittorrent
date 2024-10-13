@@ -946,3 +946,9 @@ APIController *WebSession::getAPIController(const QString &scope) const
 {
     return m_apiControllers.value(scope);
 }
+
+WebSession::~WebSession()
+{
+    qDeleteAll(m_apiControllers);
+    m_apiControllers.clear();
+}

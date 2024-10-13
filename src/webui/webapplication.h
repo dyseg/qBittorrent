@@ -72,6 +72,7 @@ class WebSession final : public ApplicationComponent<QObject>, public ISession
 {
 public:
     explicit WebSession(const QString &sid, IApplication *app);
+    ~WebSession() override;
 
     QString id() const override;
 

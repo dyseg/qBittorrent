@@ -669,7 +669,7 @@ void WebApplication::sessionInitialize()
             }
             else
             {
-                m_currentSession->updateTimestamp();
+                m_currentSession->updateTimestamp(m_sessionTimeout);
             }
         }
         else
@@ -728,7 +728,7 @@ void WebApplication::sessionStart()
         return false;
     });
 
-    m_currentSession = new WebSession(generateSid(), app());
+    m_currentSession = new WebSession(generateSid(), m_sessionTimeout, app());
     m_sessions[m_currentSession->id()] = m_currentSession;
 
     m_currentSession->registerAPIController(u"app"_s, new AppController(app(), m_currentSession));
@@ -909,11 +909,19 @@ QHostAddress WebApplication::resolveClientAddress() const
 
 // WebSession
 
-WebSession::WebSession(const QString &sid, IApplication *app)
+WebSession::WebSession(const QString &sid, const qint64 expiration, IApplication *app)
     : ApplicationComponent(app)
     , m_sid {sid}
+    , m_timer {new QTimer(this)}
 {
-    updateTimestamp();
+    m_timer->callOnTimeout([this]{
+        // if(this->m_apiControllers.isEmpty())
+        //     return;
+        qDeleteAll(this->m_apiControllers);
+        this->m_apiControllers.clear();
+    });
+    m_timer->setSingleShot(true);
+    updateTimestamp(expiration);
 }
 
 QString WebSession::id() const
@@ -925,12 +933,15 @@ bool WebSession::hasExpired(const qint64 seconds) const
 {
     if (seconds <= 0)
         return false;
-    return m_timer.hasExpired(seconds * 1000);
+    auto limit = seconds * 1000;
+    auto elapsed = m_timer->interval() - m_timer->remainingTime();
+
+    return elapsed > limit;
 }
 
-void WebSession::updateTimestamp()
+void WebSession::updateTimestamp(const qint64 seconds)
 {
-    m_timer.start();
+    m_timer->start(seconds * 1000);
 }
 
 void WebSession::registerAPIController(const QString &scope, APIController *controller)

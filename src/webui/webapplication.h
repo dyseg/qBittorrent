@@ -71,19 +71,19 @@ namespace BitTorrent
 class WebSession final : public ApplicationComponent<QObject>, public ISession
 {
 public:
-    explicit WebSession(const QString &sid, IApplication *app);
+    explicit WebSession(const QString &sid, const qint64 expiration, IApplication *app);
 
     QString id() const override;
 
     bool hasExpired(qint64 seconds) const;
-    void updateTimestamp();
+    void updateTimestamp(qint64 seconds);
 
     void registerAPIController(const QString &scope, APIController *controller);
     APIController *getAPIController(const QString &scope) const;
 
 private:
     const QString m_sid;
-    QElapsedTimer m_timer;  // timestamp
+    QTimer *m_timer;  // timestamp
     QMap<QString, APIController *> m_apiControllers;
 };
 

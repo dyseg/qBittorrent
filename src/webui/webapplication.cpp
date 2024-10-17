@@ -715,18 +715,6 @@ void WebApplication::sessionStart()
 {
     Q_ASSERT(!m_currentSession);
 
-    // remove outdated sessions
-    Algorithm::removeIf(m_sessions, [this](const QString &, const WebSession *session)
-    {
-        if (session->hasExpired(m_sessionTimeout))
-        {
-            delete session;
-            return true;
-        }
-
-        return false;
-    });
-
     m_currentSession = new WebSession(generateSid(), m_sessionTimeout, app());
     m_sessions[m_currentSession->id()] = m_currentSession;
 
@@ -918,8 +906,6 @@ WebSession::WebSession(const QString &sid, const qint64 expiration, IApplication
     , m_timer {new QTimer(this)}
 {
     m_timer->callOnTimeout([this]{
-        // if(this->m_apiControllers.isEmpty())
-        //     return;
         qDeleteAll(this->m_apiControllers);
         this->m_apiControllers.clear();
     });

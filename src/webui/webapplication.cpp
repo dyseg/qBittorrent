@@ -716,6 +716,7 @@ void WebApplication::sessionStart()
 {
     Q_ASSERT(!m_currentSession);
 
+    auto sessionCountBefore = m_sessions.count();
     // remove outdated sessions
     Algorithm::removeIf(m_sessions, [this](const QString &, const WebSession *session)
     {
@@ -727,9 +728,13 @@ void WebApplication::sessionStart()
 
         return false;
     });
-
     m_currentSession = new WebSession(generateSid(), m_sessionTimeout, app());
     m_sessions[m_currentSession->id()] = m_currentSession;
+    auto removedSessionCount = std::max(0ll, sessionCountBefore - m_sessions.count());
+    LogMsg(u"New session \"%1\". All sessions: %2 Removed sessions: %3"_s.arg(
+        m_currentSession->id(),
+        QString::number(m_sessions.count()),
+        QString::number(removedSessionCount)));
 
     m_currentSession->registerAPIController(u"app"_s, new AppController(app(), m_currentSession));
     m_currentSession->registerAPIController(u"log"_s, new LogController(app(), m_currentSession));
@@ -915,10 +920,9 @@ WebSession::WebSession(const QString &sid, const qint64 expiration, IApplication
     , m_timer {new QTimer(this)}
 {
     m_timer->callOnTimeout([this]{
-        // if(this->m_apiControllers.isEmpty())
-        //     return;
         qDeleteAll(this->m_apiControllers);
         this->m_apiControllers.clear();
+        LogMsg(u"%1 timed out"_s.arg(this->m_sid));
     });
     m_timer->setSingleShot(true);
     updateTimestamp(expiration);

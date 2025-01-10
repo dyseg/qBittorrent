@@ -575,6 +575,100 @@ void TorrentsController::trackersAction()
     setResult(trackersList);
 }
 
+void TorrentsController::decreaseTrackerTierAction()
+{
+    requireParams({u"hash"_s, u"urls"_s});
+
+    const auto id = BitTorrent::TorrentID::fromString(params()[u"hash"_s]);
+    const QStringList paramUrls = params()[u"urls"_s].split(u'|', Qt::SkipEmptyParts);
+
+    BitTorrent::Torrent *const torrent = BitTorrent::Session::instance()->getTorrent(id);
+    if (!torrent)
+        throw APIError(APIErrorType::NotFound);
+
+
+    QList<QUrl> urls;
+    urls.reserve(paramUrls.size());
+    for (const QString &urlStr : paramUrls)
+    {
+        const QUrl newTrackerUrl{urlStr};
+        if (!newTrackerUrl.isValid())
+            throw APIError(APIErrorType::BadParams, u"Tracker URL is invalid"_s);
+        urls << newTrackerUrl;
+    }
+    const QList<BitTorrent::TrackerEntryStatus> currentTrackers = torrent->trackers();
+    QList<BitTorrent::TrackerEntry> entries;
+    entries.reserve(currentTrackers.size());
+
+    bool match = false;
+    for (const BitTorrent::TrackerEntryStatus &tracker : currentTrackers)
+    {
+        const QUrl trackerUrl{tracker.url};
+
+        BitTorrent::TrackerEntry entry{
+            .url = tracker.url,
+            .tier = tracker.tier};
+        if (urls.contains(trackerUrl))
+        {
+            match = true;
+            if (entry.tier > 0)
+                --entry.tier;
+        }
+        entries.append(entry);
+    }
+    if (!match)
+        throw APIError(APIErrorType::Conflict, u"Tracker not found"_s);
+
+    torrent->replaceTrackers(entries);
+}
+
+void TorrentsController::increaseTrackerTierAction()
+{
+    requireParams({u"hash"_s, u"urls"_s});
+
+    const auto id = BitTorrent::TorrentID::fromString(params()[u"hash"_s]);
+    const QStringList paramUrls = params()[u"urls"_s].split(u'|', Qt::SkipEmptyParts);
+
+    BitTorrent::Torrent *const torrent = BitTorrent::Session::instance()->getTorrent(id);
+    if (!torrent)
+        throw APIError(APIErrorType::NotFound);
+
+
+    QList<QUrl> urls;
+    urls.reserve(paramUrls.size());
+    for (const QString &urlStr : paramUrls)
+    {
+        const QUrl newTrackerUrl{urlStr};
+        if (!newTrackerUrl.isValid())
+            throw APIError(APIErrorType::BadParams, u"Tracker URL is invalid"_s);
+        urls << newTrackerUrl;
+    }
+    const QList<BitTorrent::TrackerEntryStatus> currentTrackers = torrent->trackers();
+    QList<BitTorrent::TrackerEntry> entries;
+    entries.reserve(currentTrackers.size());
+
+    bool match = false;
+    for (const BitTorrent::TrackerEntryStatus &tracker : currentTrackers)
+    {
+        const QUrl trackerUrl{tracker.url};
+
+        BitTorrent::TrackerEntry entry{
+            .url = tracker.url,
+            .tier = tracker.tier};
+        if (urls.contains(trackerUrl))
+        {
+            match = true;
+            if (entry.tier < std::numeric_limits<decltype(entry.tier)>::max())
+                ++entry.tier;
+        }
+        entries.append(entry);
+    }
+    if (!match)
+        throw APIError(APIErrorType::Conflict, u"Tracker not found"_s);
+
+    torrent->replaceTrackers(entries);
+}
+
 // Returns the web seeds for a torrent in JSON format.
 // The return value is a JSON-formatted list of dictionaries.
 // The dictionary keys are:

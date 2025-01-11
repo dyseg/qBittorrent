@@ -136,7 +136,7 @@ window.qBittorrent.PropTrackers ??= (() => {
         if (selectedTrackers.length === 0)
             return;
 
-        const apiUrl = direction === "up" ? "api/v2/torrents/increaseTrackerTier" : "api/v2/torrents/decreaseTrackerTier";
+        const apiUrl = direction === "down" ? "api/v2/torrents/increaseTrackerTier" : "api/v2/torrents/decreaseTrackerTier";
         new Request({
             url: apiUrl,
             method: "post",

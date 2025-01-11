@@ -114,8 +114,8 @@
         <div id="torrentTrackersTableDiv" class="dynamicTableDiv">
             <div style="float: right;">
 
-                <button id="trackerUpButton" class="trackerButton" title="QBT_TR(Move tracker up)QBT_TR[CONTEXT=PropertiesWidget]">▲</button>
-                <button id="trackerDownButton" class="trackerButton" title="QBT_TR(Move tracker down)QBT_TR[CONTEXT=PropertiesWidget]">▼</button>
+                <button id="trackerTierUpButton" class="trackerTierButton" title="QBT_TR(Decrease tracker tier)QBT_TR[CONTEXT=PropertiesWidget]">▲</button>
+                <button id="trackerTierDownButton" class="trackerTierButton" title="QBT_TR(Increase tracker tier)QBT_TR[CONTEXT=PropertiesWidget]">▼</button>
 
                 <script>
                     function increaseTrackerTier(event) {
@@ -124,8 +124,8 @@
                     function decreaseTrackerTier(event) {
                         window.qBittorrent.PropTrackers.changeTier("down");
                     }
-                    document.getElementById('trackerUpButton').addEventListener('click', decreaseTrackerTier);
-                    document.getElementById('trackerDownButton').addEventListener('click', increaseTrackerTier);
+                    document.getElementById('trackerTierUpButton').addEventListener('click', decreaseTrackerTier);
+                    document.getElementById('trackerTierDownButton').addEventListener('click', increaseTrackerTier);
 
                 </script>
 

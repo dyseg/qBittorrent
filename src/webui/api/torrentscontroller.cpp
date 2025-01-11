@@ -586,16 +586,10 @@ void TorrentsController::decreaseTrackerTierAction()
     if (!torrent)
         throw APIError(APIErrorType::NotFound);
 
-
     QList<QUrl> urls;
     urls.reserve(paramUrls.size());
     for (const QString &urlStr : paramUrls)
-    {
-        const QUrl newTrackerUrl{urlStr};
-        if (!newTrackerUrl.isValid())
-            throw APIError(APIErrorType::BadParams, u"Tracker URL is invalid"_s);
-        urls << newTrackerUrl;
-    }
+        urls << QUrl::fromPercentEncoding(urlStr.toLatin1());
     const QList<BitTorrent::TrackerEntryStatus> currentTrackers = torrent->trackers();
     QList<BitTorrent::TrackerEntry> entries;
     entries.reserve(currentTrackers.size());
@@ -633,16 +627,11 @@ void TorrentsController::increaseTrackerTierAction()
     if (!torrent)
         throw APIError(APIErrorType::NotFound);
 
-
     QList<QUrl> urls;
     urls.reserve(paramUrls.size());
     for (const QString &urlStr : paramUrls)
-    {
-        const QUrl newTrackerUrl{urlStr};
-        if (!newTrackerUrl.isValid())
-            throw APIError(APIErrorType::BadParams, u"Tracker URL is invalid"_s);
-        urls << newTrackerUrl;
-    }
+        urls << QUrl::fromPercentEncoding(urlStr.toLatin1());
+
     const QList<BitTorrent::TrackerEntryStatus> currentTrackers = torrent->trackers();
     QList<BitTorrent::TrackerEntry> entries;
     entries.reserve(currentTrackers.size());

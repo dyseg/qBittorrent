@@ -105,6 +105,10 @@ window.qBittorrent.DynamicTable ??= (() => {
                 const tr = e.target.closest("tr");
                 if (!tr) {
                     // clicking on the table body deselects all rows
+
+                    if(e.target.className === "trackerButton")
+                        return;
+
                     this.deselectAll();
                     this.setRowClass();
                     return;

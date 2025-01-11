@@ -33,7 +33,8 @@ window.qBittorrent.PropTrackers ??= (() => {
     const exports = () => {
         return {
             updateData: updateData,
-            clear: clear
+            clear: clear,
+            changeTier: changeTier
         };
     };
 
@@ -128,6 +129,26 @@ window.qBittorrent.PropTrackers ??= (() => {
         clearTimeout(loadTrackersDataTimer);
         loadTrackersDataTimer = -1;
         loadTrackersData();
+    };
+
+    const changeTier = (direction) => {
+        const selectedTrackers = torrentTrackersTable.selectedRowsIds();
+        if (selectedTrackers.length === 0)
+            return;
+
+        const apiUrl = direction === "up" ? "api/v2/torrents/increaseTrackerTier" : "api/v2/torrents/decreaseTrackerTier";
+        new Request({
+            url: apiUrl,
+            method: "post",
+            data: {
+                hash: current_hash,
+                urls: selectedTrackers.map(encodeURIComponent).join("|"),
+            },
+            onSuccess: () => {
+                updateData();
+            },
+        }).send();
+        torrentTrackersTable.reselectRows(selectedTrackers);
     };
 
     const torrentTrackersContextMenu = new window.qBittorrent.ContextMenu.ContextMenu({

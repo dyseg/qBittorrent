@@ -1299,9 +1299,16 @@ window.qBittorrent.DynamicTable ??= (() => {
 
             // dlspeed
             this.columns["dlspeed"].updateTd = function(td, row) {
-                const speed = window.qBittorrent.Misc.friendlyUnit(this.getRowValue(row), true);
-                td.textContent = speed;
-                td.title = speed;
+                const speed = this.getRowValue(row);
+                if (speed === 0) {
+                    td.textContent = "";
+                    td.title = "";
+                }
+                else {
+                    const formattedSpeed = window.qBittorrent.Misc.friendlyUnit(speed, true);
+                    td.textContent = formattedSpeed;
+                    td.title = formattedSpeed;
+                }
             };
 
             // upspeed

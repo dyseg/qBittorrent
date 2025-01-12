@@ -316,13 +316,22 @@ a.propButton img {
 }
 
 .torrentTrackerTierChange {
-    background-color: var(--color-background-default);
-    padding: 2px;
+    background-color: var(--color-background-primary);
+    /* padding: 2px; */
     position: absolute;
     right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    /* top: 50%;
+    transform: translateY(-50%); */
     width: min-content;
+    height: inherit;
+    overflow: hidden;
+}
+
+.trackerTierButton {
+    position: relative;
+    top: 50%;
+    margin: 3px;
+    transform: translateY(-100%);
 }
 
 /* context menu specific */

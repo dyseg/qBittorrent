@@ -315,6 +315,16 @@ a.propButton img {
     }
 }
 
+.torrentTrackerTierChange {
+    background-color: var(--color-background-default);
+    padding: 2px;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: min-content;
+}
+
 /* context menu specific */
 
 .contextMenu {

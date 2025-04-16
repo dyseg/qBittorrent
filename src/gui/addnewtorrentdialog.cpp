@@ -1,6 +1,6 @@
 /*
  * Bittorrent Client using Qt and libtorrent.
- * Copyright (C) 2022-2024  Vladimir Golovnev <glassez@yandex.ru>
+ * Copyright (C) 2022-2025  Vladimir Golovnev <glassez@yandex.ru>
  * Copyright (C) 2012  Christophe Dumez <chris@qbittorrent.org>
  *
  * This program is free software; you can redistribute it and/or
@@ -122,7 +122,7 @@ namespace
         fsPathEdit->setCurrentIndex(existingIndex);
     }
 
-    void updatePathHistory(const QString &settingsKey, const Path &path, const int maxLength)
+    void updatePathHistory(const QString &settingsKey, const Path &path, const qsizetype maxLength)
     {
         // Add last used save path to the front of history
 
@@ -134,7 +134,10 @@ namespace
         else
             pathList.prepend(path.toString());
 
-        settings()->storeValue(settingsKey, QStringList(pathList.mid(0, maxLength)));
+        if (pathList.size() > maxLength)
+            pathList.resize(maxLength);
+
+        settings()->storeValue(settingsKey, pathList);
     }
 }
 
@@ -375,8 +378,7 @@ AddNewTorrentDialog::AddNewTorrentDialog(const BitTorrent::TorrentDescriptor &to
     connect(Preferences::instance(), &Preferences::changed, []
     {
         const int length = Preferences::instance()->addNewTorrentDialogSavePathHistoryLength();
-        settings()->storeValue(KEY_SAVEPATHHISTORY
-                , QStringList(settings()->loadValue<QStringList>(KEY_SAVEPATHHISTORY).mid(0, length)));
+        settings()->storeValue(KEY_SAVEPATHHISTORY, settings()->loadValue<QStringList>(KEY_SAVEPATHHISTORY).mid(0, length));
     });
 
     setCurrentContext(std::make_shared<Context>(Context {torrentDescr, inParams}));
@@ -384,7 +386,6 @@ AddNewTorrentDialog::AddNewTorrentDialog(const BitTorrent::TorrentDescriptor &to
 
 AddNewTorrentDialog::~AddNewTorrentDialog()
 {
-    saveState();
     delete m_ui;
 }
 
@@ -398,7 +399,7 @@ void AddNewTorrentDialog::loadState()
     if (const QSize dialogSize = m_storeDialogSize; dialogSize.isValid())
         resize(dialogSize);
 
-    m_ui->splitter->restoreState(m_storeSplitterState);;
+    m_ui->splitter->restoreState(m_storeSplitterState);
 }
 
 void AddNewTorrentDialog::saveState()
@@ -832,6 +833,12 @@ void AddNewTorrentDialog::reject()
     }
 
     QDialog::reject();
+}
+
+void AddNewTorrentDialog::done(const int result)
+{
+    saveState();
+    QDialog::done(result);
 }
 
 void AddNewTorrentDialog::updateMetadata(const BitTorrent::TorrentInfo &metadata)

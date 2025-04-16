@@ -41,6 +41,7 @@
 #include <QObject>
 #include <QRegularExpression>
 #include <QSet>
+#include <QTimer>
 #include <QTranslator>
 
 #include "base/applicationcomponent.h"

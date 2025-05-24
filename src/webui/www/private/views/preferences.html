@@ -141,7 +141,7 @@
             </select>
         </div>
         <fieldset class="settings">
-            <legend>QBT_TR(When duplicate torrent is being added)QBT_TR[CONTEXT=OptionsDialog]</legend>
+            <legend>QBT_TR(When adding a duplicate torrent)QBT_TR[CONTEXT=OptionsDialog]</legend>
             <div class="formRow">
                 <input type="checkbox" id="mergeTrackersInput">
                 <label for="mergeTrackersInput">QBT_TR(Merge trackers to existing torrent)QBT_TR[CONTEXT=OptionsDialog]</label>
@@ -1159,7 +1159,7 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
                         <label for="memoryWorkingSetLimit">QBT_TR(Physical memory (RAM) usage limit:)QBT_TR[CONTEXT=OptionsDialog]&nbsp;<a href="https://wikipedia.org/wiki/Working_set" target="_blank">(?)</a></label>
                     </td>
                     <td>
-                        <input type="text" id="memoryWorkingSetLimit" style="width: 15em;" title="QBT_TR(This option is less effective on Linux)QBT_TR[CONTEXT=OptionsDialog]">&nbsp;&nbsp;QBT_TR(MiB)QBT_TR[CONTEXT=OptionsDialog]
+                        <input type="text" id="memoryWorkingSetLimit" style="width: 15em;">&nbsp;&nbsp;QBT_TR(MiB)QBT_TR[CONTEXT=OptionsDialog]
                     </td>
                 </tr>
                 <tr>
@@ -2912,8 +2912,8 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             let maxRatio = -1;
             if (document.getElementById("maxRatioCheckbox").checked) {
                 maxRatio = Number(document.getElementById("maxRatioValue").value);
-                if (isNaN(maxRatio) || (maxRatio < 0) || (maxRatio > 9998)) {
-                    alert("QBT_TR(Share ratio limit must be between 0 and 9998.)QBT_TR[CONTEXT=HttpServer]");
+                if (isNaN(maxRatio) || (maxRatio < 0)) {
+                    alert("QBT_TR(Share ratio limit must not have a negative value.)QBT_TR[CONTEXT=HttpServer]");
                     return;
                 }
             }
@@ -2923,8 +2923,8 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             let maxSeedingTime = -1;
             if (document.getElementById("maxSeedingTimeCheckbox").checked) {
                 maxSeedingTime = Number(document.getElementById("maxSeedingTimeValue").value);
-                if (Number.isNaN(maxSeedingTime) || (maxSeedingTime < 0) || (maxSeedingTime > 525600)) {
-                    alert("QBT_TR(Seeding time limit must be between 0 and 525600 minutes.)QBT_TR[CONTEXT=HttpServer]");
+                if (Number.isNaN(maxSeedingTime) || (maxSeedingTime < 0)) {
+                    alert("QBT_TR(Seeding time limit must not have a negative value.)QBT_TR[CONTEXT=HttpServer]");
                     return;
                 }
             }
@@ -2934,8 +2934,8 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             let maxInactiveSeedingTime = -1;
             if (document.getElementById("maxInactiveSeedingTimeCheckbox").checked) {
                 maxInactiveSeedingTime = Number(document.getElementById("maxInactiveSeedingTimeValue").value);
-                if (Number.isNaN(maxInactiveSeedingTime) || (maxInactiveSeedingTime < 0) || (maxInactiveSeedingTime > 525600)) {
-                    alert("QBT_TR(Seeding time limit must be between 0 and 525600 minutes.)QBT_TR[CONTEXT=HttpServer]");
+                if (Number.isNaN(maxInactiveSeedingTime) || (maxInactiveSeedingTime < 0)) {
+                    alert("QBT_TR(Seeding time limit must not have a negative value.)QBT_TR[CONTEXT=HttpServer]");
                     return;
                 }
             }
@@ -3164,10 +3164,13 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
                     document.getElementById("diskIOWriteModeWriteThrough").style.display = "none";
             }
 
+            if ((buildInfo.platform === "linux") || (buildInfo.platform === "macos"))
+                document.getElementById("rowMemoryWorkingSetLimit").style.display = "none";
+
             if ((buildInfo.platform !== "macos") && (buildInfo.platform !== "windows"))
                 document.getElementById("rowMarkOfTheWeb").style.display = "none";
 
-            document.getElementById("networkInterface").addEventListener("change", function() {
+            document.getElementById("networkInterface").addEventListener("change", function(event) {
                 updateInterfaceAddresses(this.value, "");
             });
 

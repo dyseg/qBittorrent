@@ -1,6 +1,7 @@
 /*
  * Bittorrent Client using Qt and libtorrent.
- * Copyright (C) 2015-2022  Vladimir Golovnev <glassez@yandex.ru>
+ * Copyright (C) 2025  bolshoytoster <toasterbig@gmail.com>
+ * Copyright (C) 2025  Mike Tzou (Chocobo1)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,43 +27,46 @@
  * exception statement from your version.
  */
 
-#pragma once
+"use strict";
 
-#include <QDir>
-#include <QList>
-
-#include "base/pathfwd.h"
-#include "base/utils/thread.h"
-
-#include "resumedatastorage.h"
-
-class QByteArray;
-
-namespace BitTorrent
-{
-    class BencodeResumeDataStorage final : public ResumeDataStorage
-    {
-        Q_OBJECT
-        Q_DISABLE_COPY_MOVE(BencodeResumeDataStorage)
-
-    public:
-        explicit BencodeResumeDataStorage(const Path &path, QObject *parent = nullptr);
-
-        QList<TorrentID> registeredTorrents() const override;
-        LoadResumeDataResult load(const TorrentID &id) const override;
-        void store(const TorrentID &id, LoadTorrentParams resumeData) const override;
-        void remove(const TorrentID &id) const override;
-        void storeQueue(const QList<TorrentID> &queue) const override;
-
-    private:
-        void doLoadAll() const override;
-        void loadQueue(const Path &queueFilename);
-        LoadResumeDataResult loadTorrentResumeData(const QByteArray &data, const QByteArray &metadata) const;
-
-        QList<TorrentID> m_registeredTorrents;
-        Utils::Thread::UniquePtr m_ioThread;
-
-        class Worker;
-        Worker *m_asyncWorker = nullptr;
+window.qBittorrent ??= {};
+window.qBittorrent.MonkeyPatch ??= (() => {
+    const exports = () => {
+        return {
+            patch: patch
+        };
     };
-}
+
+    const patch = () => {
+        patchMootoolsDocumentId();
+    };
+
+    const patchMootoolsDocumentId = () => {
+        // Override MooTools' `document.id` (used for `$(id)`), which prevents it
+        // from allocating a `uniqueNumber` for elements that don't need it.
+        // MooTools and MochaUI use it internally.
+
+        if (document.id === undefined)
+            return;
+
+        document.id = (el) => {
+            if ((el === null) || (el === undefined))
+                return null;
+
+            switch (typeof el) {
+                case "object":
+                    return el;
+                case "string":
+                    return document.getElementById(el);
+            }
+
+            return null;
+        };
+    };
+
+    return exports();
+})();
+Object.freeze(window.qBittorrent.MonkeyPatch);
+
+// execute now
+window.qBittorrent.MonkeyPatch.patch();

@@ -73,6 +73,9 @@ window.qBittorrent.Client ??= (() => {
     };
 
     const getSyncMainDataInterval = () => {
+        // Sync at half of the session timeout (in ms), to prevent timing out
+        if (document.hidden)
+            return (window.qBittorrent.Cache.preferences.get().web_ui_session_timeout * 1000) / 2;
         return customSyncMainDataInterval ? customSyncMainDataInterval : serverSyncMainDataInterval;
     };
 
@@ -161,7 +164,10 @@ let setTagFilter = () => {};
 
 /* Trackers filter */
 const TRACKERS_ALL = "b4af0e4c-e76d-4bac-a392-46cbc18d9655";
+const TRACKERS_ANNOUNCE_ERROR = "d0b4cad2-9f6f-4e7f-8d4b-f80a103dd436";
+const TRACKERS_ERROR = "b551cfc3-64e9-4393-bc88-5d6ea2fab5cc";
 const TRACKERS_TRACKERLESS = "e24bd469-ea22-404c-8e2e-a17c82f37ea0";
+const TRACKERS_WARNING = "82a702c5-210c-412b-829f-97632d7557e9";
 
 // Map<trackerHost: String, Map<trackerURL: String, torrents: Set>>
 const trackerMap = new Map();
@@ -499,7 +505,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
         if (!categoryList)
             return;
 
-        [...categoryList.children].forEach((el) => { el.destroy(); });
+        [...categoryList.children].forEach((el) => { el.remove(); });
 
         const categoryItemTemplate = document.getElementById("categoryFilterItem");
 
@@ -620,7 +626,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
         if (tagFilterList === null)
             return;
 
-        [...tagFilterList.children].forEach((el) => { el.destroy(); });
+        [...tagFilterList.children].forEach((el) => { el.remove(); });
 
         const tagItemTemplate = document.getElementById("tagFilterItem");
 
@@ -673,7 +679,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
         if (trackerFilterList === null)
             return;
 
-        [...trackerFilterList.children].forEach((el) => { el.destroy(); });
+        [...trackerFilterList.children].forEach((el) => { el.remove(); });
 
         const trackerItemTemplate = document.getElementById("trackerFilterItem");
 
@@ -685,17 +691,41 @@ window.addEventListener("DOMContentLoaded", (event) => {
             const span = trackerFilterItem.firstElementChild;
             span.lastChild.textContent = `${text} (${count})`;
 
+            switch (host) {
+                case TRACKERS_ANNOUNCE_ERROR:
+                case TRACKERS_ERROR:
+                    span.lastElementChild.src = "images/tracker-error.svg";
+                    break;
+                case TRACKERS_TRACKERLESS:
+                    span.lastElementChild.src = "images/trackerless.svg";
+                    break;
+                case TRACKERS_WARNING:
+                    span.lastElementChild.src = "images/tracker-warning.svg";
+                    break;
+            }
+
             return trackerFilterItem;
         };
 
-        let trackerlessTorrentsCount = 0;
-        for (const { full_data: { trackers_count: trackersCount } } of torrentsTable.getRowValues()) {
-            if (trackersCount === 0)
-                trackerlessTorrentsCount += 1;
+        let trackerlessCount = 0;
+        let trackerErrorCount = 0;
+        let announceErrorCount = 0;
+        let trackerWarningCount = 0;
+        for (const { full_data } of torrentsTable.getRowValues()) {
+            if (full_data.trackers_count === 0)
+                trackerlessCount += 1;
+
+            // counting bools by adding them
+            trackerErrorCount += full_data.has_tracker_error;
+            announceErrorCount += full_data.has_other_announce_error;
+            trackerWarningCount += full_data.has_tracker_warning;
         }
 
         trackerFilterList.appendChild(createLink(TRACKERS_ALL, "QBT_TR(All)QBT_TR[CONTEXT=TrackerFiltersList]", torrentsTable.getRowSize()));
-        trackerFilterList.appendChild(createLink(TRACKERS_TRACKERLESS, "QBT_TR(Trackerless)QBT_TR[CONTEXT=TrackerFiltersList]", trackerlessTorrentsCount));
+        trackerFilterList.appendChild(createLink(TRACKERS_TRACKERLESS, "QBT_TR(Trackerless)QBT_TR[CONTEXT=TrackerFiltersList]", trackerlessCount));
+        trackerFilterList.appendChild(createLink(TRACKERS_ERROR, "QBT_TR(Tracker error)QBT_TR[CONTEXT=TrackerFiltersList]", trackerErrorCount));
+        trackerFilterList.appendChild(createLink(TRACKERS_ANNOUNCE_ERROR, "QBT_TR(Other error)QBT_TR[CONTEXT=TrackerFiltersList]", announceErrorCount));
+        trackerFilterList.appendChild(createLink(TRACKERS_WARNING, "QBT_TR(Warning)QBT_TR[CONTEXT=TrackerFiltersList]", trackerWarningCount));
 
         // Sort trackers by hostname
         const sortedList = [];
@@ -752,8 +782,6 @@ window.addEventListener("DOMContentLoaded", (event) => {
     let syncMainDataTimeoutID = -1;
     let syncRequestInProgress = false;
     const syncMainData = () => {
-        if (document.hidden)
-            return;
         syncRequestInProgress = true;
         const url = new URL("api/v2/sync/maindata", window.location);
         url.search = new URLSearchParams({
@@ -939,7 +967,9 @@ window.addEventListener("DOMContentLoaded", (event) => {
                     if (errorDiv)
                         errorDiv.textContent = "QBT_TR(qBittorrent client is not reachable)QBT_TR[CONTEXT=HttpServer]";
                     syncRequestInProgress = false;
-                    syncData(2000);
+                    syncData(document.hidden
+                        ? (window.qBittorrent.Cache.preferences.get().web_ui_session_timeout * 1000) / 2
+                        : 2000);
                 });
     };
 
@@ -1758,26 +1788,29 @@ window.addEventListener("DOMContentLoaded", (event) => {
         }
     });
 
-    new ClipboardJS(".copyToClipboard", {
-        text: (trigger) => {
-            switch (trigger.id) {
-                case "copyName":
-                    return copyNameFN();
-                case "copyInfohash1":
-                    return copyInfohashFN(1);
-                case "copyInfohash2":
-                    return copyInfohashFN(2);
-                case "copyMagnetLink":
-                    return copyMagnetLinkFN();
-                case "copyID":
-                    return copyIdFN();
-                case "copyComment":
-                    return copyCommentFN();
-                default:
-                    return "";
-            }
+    for (const element of document.getElementsByClassName("copyToClipboard")) {
+        const setupClickEvent = (textFunc) => element.addEventListener("click", async (event) => await clipboardCopy(textFunc()));
+        switch (element.id) {
+            case "copyName":
+                setupClickEvent(copyNameFN);
+                break;
+            case "copyInfohash1":
+                setupClickEvent(() => copyInfohashFN(1));
+                break;
+            case "copyInfohash2":
+                setupClickEvent(() => copyInfohashFN(2));
+                break;
+            case "copyMagnetLink":
+                setupClickEvent(copyMagnetLinkFN);
+                break;
+            case "copyID":
+                setupClickEvent(copyIdFN);
+                break;
+            case "copyComment":
+                setupClickEvent(copyCommentFN);
+                break;
         }
-    });
+    }
 
     addEventListener("visibilitychange", (event) => {
         if (document.hidden)

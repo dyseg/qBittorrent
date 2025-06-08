@@ -385,6 +385,7 @@
                 <li>QBT_TR(%I: Info hash v1)QBT_TR[CONTEXT=OptionsDialog]</li>
                 <li>QBT_TR(%J: Info hash v2)QBT_TR[CONTEXT=OptionsDialog]</li>
                 <li>QBT_TR(%K: Torrent ID)QBT_TR[CONTEXT=OptionsDialog]</li>
+                <li>QBT_TR(%M: Comment)QBT_TR[CONTEXT=OptionsDialog]</li>
             </ul>
             QBT_TR(Tip: Encapsulate parameter with quotation marks to avoid text being cut off at whitespace (e.g., "%N"))QBT_TR[CONTEXT=OptionsDialog]
         </div>
@@ -2132,7 +2133,7 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
 
         // Advanced Tab
         const updateNetworkInterfaces = (default_iface, default_iface_name) => {
-            [...document.getElementById("networkInterface").children].forEach((el) => { el.destroy(); });
+            [...document.getElementById("networkInterface").children].forEach((el) => { el.remove(); });
 
             fetch("api/v2/app/networkInterfaceList", {
                     method: "GET",
@@ -2161,7 +2162,7 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
         };
 
         const updateInterfaceAddresses = (iface, default_addr) => {
-            [...document.getElementById("optionalIPAddressToBind").children].forEach((el) => { el.destroy(); });
+            [...document.getElementById("optionalIPAddressToBind").children].forEach((el) => { el.remove(); });
 
             const url = new URL("api/v2/app/networkInterfaceAddressList", window.location);
             url.search = new URLSearchParams({

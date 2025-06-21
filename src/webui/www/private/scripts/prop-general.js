@@ -174,8 +174,10 @@ window.qBittorrent.PropGeneral ??= (() => {
                     document.getElementById("share_ratio").textContent = data.share_ratio.toFixed(2);
 
                     document.getElementById("popularity").textContent = data.popularity.toFixed(2);
-
-                    document.getElementById("importance").textContent = data.importance.toFixed(2);
+                    const importance = (data.importance === -1)
+                        ? "∞"
+                        : data.importance.toFixed(2);
+                    document.getElementById("importance").textContent = importance;
 
                     document.getElementById("reannounce").textContent = window.qBittorrent.Misc.friendlyDuration(data.reannounce);
 

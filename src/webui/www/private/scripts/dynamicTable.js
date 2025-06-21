@@ -1433,7 +1433,7 @@ window.qBittorrent.DynamicTable ??= (() => {
             };
 
             // importance
-            this.columns["importance".updateId] = function(td, row) {
+            this.columns["importance"].updateTd = function(td, row) {
                 const value = this.getRowValue(row);
                 const importance = (value === -1) ? "∞" : window.qBittorrent.Misc.toFixedPointString(value, 2);
                 td.textContent = importance;

@@ -1100,6 +1100,7 @@ const initializeWindows = () => {
             || (trackerHost === TRACKERS_ANNOUNCE_ERROR)
             || (trackerHost === TRACKERS_ERROR)
             || (trackerHost === TRACKERS_TRACKERLESS)
+            || (trackerHost === TRACKERS_UNREGISTERED)
             || (trackerHost === TRACKERS_WARNING))
             return;
 

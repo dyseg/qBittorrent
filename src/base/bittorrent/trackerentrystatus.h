@@ -43,7 +43,8 @@ namespace BitTorrent
         Working = 2,
         NotWorking = 4,
         TrackerError = 5,
-        Unreachable = 6
+        Unreachable = 6,
+        Unregistered = 7,
     };
 
     struct TrackerEndpointStatus

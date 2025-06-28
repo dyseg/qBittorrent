@@ -1702,6 +1702,11 @@ window.qBittorrent.DynamicTable ??= (() => {
                     if (row["full_data"].trackers_count > 0)
                         return false;
                     break;
+                
+                case TRACKERS_UNREGISTERED:
+                    if (!row["full_data"]["has_unregistered_error"])
+                        return false;
+                    break;
 
                 case TRACKERS_WARNING:
                     if (!row["full_data"]["has_tracker_warning"])

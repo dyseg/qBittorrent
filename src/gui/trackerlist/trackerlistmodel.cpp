@@ -239,6 +239,8 @@ QString TrackerListModel::Item::statusText() const
         return TrackerListModel::tr("Unreachable");
     case BitTorrent::TrackerEndpointState::NotContacted:
         return TrackerListModel::tr("Not contacted yet");
+    case BitTorrent::TrackerEndpointState::Unregistered:
+        return TrackerListModel::tr("Unregistered");
     }
 
     return TrackerListModel::tr("Invalid state!");

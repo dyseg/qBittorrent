@@ -56,6 +56,7 @@ namespace
         TRACKERLESS_ROW,
         TRACKERERROR_ROW,
         OTHERERROR_ROW,
+        UNREGISTERED_ROW,
         WARNING_ROW,
 
         NUM_SPECIAL_ROWS
@@ -103,6 +104,8 @@ namespace
             return TrackersFilterWidget::tr("Other error (%1)");
         case WARNING_ROW:
             return TrackersFilterWidget::tr("Warning (%1)");
+        case UNREGISTERED_ROW:
+            return TrackersFilterWidget::tr("Unregistered (%1)");
         default:
             return {};
         }
@@ -134,6 +137,9 @@ TrackersFilterWidget::TrackersFilterWidget(QWidget *parent, TransferListWidget *
     auto *trackerErrorItem = new QListWidgetItem(this);
     trackerErrorItem->setData(Qt::DisplayRole, formatItemText(TRACKERERROR_ROW, 0));
     trackerErrorItem->setData(Qt::DecorationRole, UIThemeManager::instance()->getIcon(u"tracker-error"_s, u"dialog-error"_s));
+    auto *unregisteredItem = new QListWidgetItem(this);
+    unregisteredItem->setData(Qt::DisplayRole, formatItemText(UNREGISTERED_ROW, 0));
+    unregisteredItem->setData(Qt::DecorationRole, UIThemeManager::instance()->getIcon(u"tracker-error"_s, u"dialog-error"_s));
     auto *otherErrorItem = new QListWidgetItem(this);
     otherErrorItem->setData(Qt::DisplayRole, formatItemText(OTHERERROR_ROW, 0));
     otherErrorItem->setData(Qt::DecorationRole, UIThemeManager::instance()->getIcon(u"tracker-error"_s, u"dialog-error"_s));
@@ -183,6 +189,7 @@ void TrackersFilterWidget::refreshTrackers(const BitTorrent::Torrent *torrent)
     m_errors.remove(torrentID);
     m_trackerErrors.remove(torrentID);
     m_warnings.remove(torrentID);
+    m_unregistered.remove(torrentID);
 
     Algorithm::removeIf(m_trackers, [this, &torrentID](const QString &host, TrackerData &trackerData)
     {
@@ -218,9 +225,11 @@ void TrackersFilterWidget::refreshTrackers(const BitTorrent::Torrent *torrent)
     item(OTHERERROR_ROW)->setText(formatItemText(OTHERERROR_ROW, m_errors.size()));
     item(TRACKERERROR_ROW)->setText(formatItemText(TRACKERERROR_ROW, m_trackerErrors.size()));
     item(WARNING_ROW)->setText(formatItemText(WARNING_ROW, m_warnings.size()));
+    item(UNREGISTERED_ROW)->setText(formatItemText(UNREGISTERED_ROW, m_unregistered.size()));
 
     if (const int row = currentRow(); (row == OTHERERROR_ROW)
-        || (row == TRACKERERROR_ROW) || (row == WARNING_ROW))
+        || (row == TRACKERERROR_ROW) || (row == WARNING_ROW)
+        || (row == UNREGISTERED_ROW))
     {
         applyFilter(row);
     }
@@ -334,6 +343,20 @@ void TrackersFilterWidget::removeItem(const QString &trackerURL, const BitTorren
             }
         }
 
+        if (const auto unregisteredHashesIt = m_unregistered.find(id)
+                ; unregisteredHashesIt != m_unregistered.end())
+        {
+            QSet<QString> &unregistered = *unregisteredHashesIt;
+            unregistered.remove(trackerURL);
+            if (unregistered.isEmpty())
+            {
+                m_unregistered.erase(unregisteredHashesIt);
+                item(UNREGISTERED_ROW)->setText(formatItemText(UNREGISTERED_ROW, m_unregistered.size()));
+                if (currentRow() == UNREGISTERED_ROW)
+                    applyFilter(UNREGISTERED_ROW);
+            }
+        }
+
         trackerItem = m_trackers.value(host).item;
 
         if (torrentIDs.isEmpty())
@@ -389,6 +412,7 @@ void TrackersFilterWidget::handleTrackerStatusesUpdated(const BitTorrent::Torren
     auto errorHashesIt = m_errors.find(id);
     auto trackerErrorHashesIt = m_trackerErrors.find(id);
     auto warningHashesIt = m_warnings.find(id);
+    auto unregisteredHashesIt = m_unregistered.find(id);
 
     for (const BitTorrent::TrackerEntryStatus &trackerEntryStatus : updatedTrackers)
     {
@@ -461,6 +485,15 @@ void TrackersFilterWidget::handleTrackerStatusesUpdated(const BitTorrent::Torren
                     errorHashesIt->remove(trackerEntryStatus.url);
                 if (trackerErrorHashesIt != m_trackerErrors.end())
                     trackerErrorHashesIt->remove(trackerEntryStatus.url);
+                if (unregisteredHashesIt != m_unregistered.end())
+                    unregisteredHashesIt->remove(trackerEntryStatus.url);            }
+            break;
+        
+        case BitTorrent::TrackerEndpointState::Unregistered:
+            {
+                if (unregisteredHashesIt == m_unregistered.end())
+                    unregisteredHashesIt = m_unregistered.insert(id, {});
+                unregisteredHashesIt->insert(trackerEntryStatus.url);
             }
             break;
         };
@@ -472,13 +505,17 @@ void TrackersFilterWidget::handleTrackerStatusesUpdated(const BitTorrent::Torren
         m_trackerErrors.erase(trackerErrorHashesIt);
     if ((warningHashesIt != m_warnings.end()) && warningHashesIt->isEmpty())
         m_warnings.erase(warningHashesIt);
+    if ((unregisteredHashesIt != m_unregistered.end()) && unregisteredHashesIt->isEmpty())
+        m_unregistered.erase(unregisteredHashesIt);
 
     item(OTHERERROR_ROW)->setText(formatItemText(OTHERERROR_ROW, m_errors.size()));
     item(TRACKERERROR_ROW)->setText(formatItemText(TRACKERERROR_ROW, m_trackerErrors.size()));
     item(WARNING_ROW)->setText(formatItemText(WARNING_ROW, m_warnings.size()));
+    item(UNREGISTERED_ROW)->setText(formatItemText(UNREGISTERED_ROW, m_unregistered.size()));
 
     if (const int row = currentRow(); (row == OTHERERROR_ROW)
-        || (row == TRACKERERROR_ROW) || (row == WARNING_ROW))
+        || (row == TRACKERERROR_ROW) || (row == WARNING_ROW)
+        || (row == UNREGISTERED_ROW))
     {
         applyFilter(row);
     }
@@ -714,6 +751,8 @@ QSet<BitTorrent::TorrentID> TrackersFilterWidget::getTorrentIDs(const int row) c
         return {m_trackerErrors.keyBegin(), m_trackerErrors.keyEnd()};
     case WARNING_ROW:
         return {m_warnings.keyBegin(), m_warnings.keyEnd()};
+    case UNREGISTERED_ROW:
+        return {m_unregistered.keyBegin(), m_unregistered.keyEnd()};
     default:
         return m_trackers.value(trackerFromRow(row)).torrents;
     }

@@ -123,6 +123,7 @@ namespace
     const QString KEY_TORRENT_HAS_TRACKER_WARNING = u"has_tracker_warning"_s;
     const QString KEY_TORRENT_HAS_TRACKER_ERROR = u"has_tracker_error"_s;
     const QString KEY_TORRENT_HAS_OTHER_ANNOUNCE_ERROR = u"has_other_announce_error"_s;
+    const QString KEY_TORRENT_HAS_UNREGISTERED_ERROR = u"has_unregistered_error"_s;
 
     QStringList asStrings(const QSet<BitTorrent::TorrentID> &torrentIDs)
     {
@@ -412,6 +413,7 @@ namespace
         bool hasTrackerWarning = false;
         bool hasTrackerError = false;
         bool hasOtherAnnounceError = false;
+        bool hasUnregisteredError = false;
         for (const BitTorrent::TrackerEntryStatus &status : asConst(torrent->trackers()))
         {
             switch (status.state)
@@ -427,17 +429,21 @@ namespace
             case BitTorrent::TrackerEndpointState::Unreachable:
                 hasOtherAnnounceError = true;
                 break;
+            case BitTorrent::TrackerEndpointState::Unregistered:
+                hasUnregisteredError = true;
+                break;
             default:
                 break;
             }
 
-            if (hasTrackerWarning && hasTrackerError && hasOtherAnnounceError)
+            if (hasTrackerWarning && hasTrackerError && hasOtherAnnounceError && hasUnregisteredError)
                 break;
         }
 
         serializedTorrent[KEY_TORRENT_HAS_TRACKER_WARNING] = hasTrackerWarning;
         serializedTorrent[KEY_TORRENT_HAS_TRACKER_ERROR] = hasTrackerError;
         serializedTorrent[KEY_TORRENT_HAS_OTHER_ANNOUNCE_ERROR] = hasOtherAnnounceError;
+        serializedTorrent[KEY_TORRENT_HAS_UNREGISTERED_ERROR] = hasUnregisteredError;
     }
 }
 
@@ -502,6 +508,7 @@ void SyncController::updateFreeDiskSpace(const qint64 freeDiskSpace)
 //  - "total_size": Size including unwanted data
 //  - "has_tracker_warning": the torrent has working tracker that has a message
 //  - "has_tracker_error": the torrent has a tracker error
+//  - "has_unregistered_error": the torrent is not registered on one of the trackers
 //  - "has_other_announce_error": the torrent has other problems announcing to a tracker
 // Server state map may contain the following keys:
 //  - "connection_status": connection status
@@ -705,6 +712,7 @@ QJsonObject SyncController::generateMaindataSyncData(const int id, const bool fu
             serializedTorrent[KEY_TORRENT_HAS_TRACKER_WARNING] = torrentSnapshot[KEY_TORRENT_HAS_TRACKER_WARNING];
             serializedTorrent[KEY_TORRENT_HAS_TRACKER_ERROR] = torrentSnapshot[KEY_TORRENT_HAS_TRACKER_ERROR];
             serializedTorrent[KEY_TORRENT_HAS_OTHER_ANNOUNCE_ERROR] = torrentSnapshot[KEY_TORRENT_HAS_OTHER_ANNOUNCE_ERROR];
+            serializedTorrent[KEY_TORRENT_HAS_UNREGISTERED_ERROR] = torrentSnapshot[KEY_TORRENT_HAS_UNREGISTERED_ERROR];
         }
 
         if (const QVariantMap syncData = processMap(torrentSnapshot, serializedTorrent); !syncData.isEmpty())

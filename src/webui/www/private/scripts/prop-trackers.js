@@ -113,6 +113,8 @@ window.qBittorrent.PropTrackers ??= (() => {
                             leeches: (tracker.num_leeches >= 0) ? tracker.num_leeches : "QBT_TR(N/A)QBT_TR[CONTEXT=TrackerListWidget]",
                             downloaded: (tracker.num_downloaded >= 0) ? tracker.num_downloaded : "QBT_TR(N/A)QBT_TR[CONTEXT=TrackerListWidget]",
                             message: tracker.msg,
+                            next_announce_time: tracker.next_announce_time,
+                            min_announce: tracker.min_announce,
                             _sortable: !tracker.url.startsWith("** [")
                         };
 

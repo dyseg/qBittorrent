@@ -2115,7 +2115,9 @@ window.qBittorrent.DynamicTable ??= (() => {
             this.newColumn("leeches", "", "QBT_TR(Leeches)QBT_TR[CONTEXT=TrackerListWidget]", 75, true);
             this.newColumn("downloaded", "", "QBT_TR(Times Downloaded)QBT_TR[CONTEXT=TrackerListWidget]", 100, true);
             this.newColumn("message", "", "QBT_TR(Message)QBT_TR[CONTEXT=TrackerListWidget]", 250, true);
-
+            this.newColumn("next_announce_time", "", "QBT_TR(Next Announce)QBT_TR[CONTEXT=TrackerListWidget]", 75, true);
+            this.newColumn("min_announce", "", "QBT_TR(Min Announce)QBT_TR[CONTEXT=TrackerListWidget]", 75, true);
+            
             this.initColumnsFunctions();
         }
 
@@ -2194,6 +2196,29 @@ window.qBittorrent.DynamicTable ??= (() => {
                 td.classList.add(statusClass);
                 td.textContent = status;
                 td.title = status;
+            };
+
+            function updateAnnounceTimeTd(td, row, column) {
+                const time = column.getRowValue(row);
+                var diff;
+                if (time > 0) {
+                    const announceTime = new Date(time * 1000);
+                    const now = new Date();
+                    diff = (announceTime - now) / 1000;
+                    diff = Math.max(diff, 0);
+                }
+                else
+                    diff = 0;
+                const formattedTime = window.qBittorrent.Misc.friendlyDuration(diff);
+                td.textContent = formattedTime;
+                td.title = formattedTime;
+            }
+
+            this.columns["next_announce_time"].updateTd = function(td, row) {
+                updateAnnounceTimeTd(td, row, this);
+            };
+            this.columns["min_announce"].updateTd = function(td, row) {
+                updateAnnounceTimeTd(td, row, this);
             };
         }
     }

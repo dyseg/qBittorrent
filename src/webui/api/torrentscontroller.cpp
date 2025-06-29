@@ -75,6 +75,8 @@ const QString KEY_TRACKER_PEERS_COUNT = u"num_peers"_s;
 const QString KEY_TRACKER_SEEDS_COUNT = u"num_seeds"_s;
 const QString KEY_TRACKER_LEECHES_COUNT = u"num_leeches"_s;
 const QString KEY_TRACKER_DOWNLOADED_COUNT = u"num_downloaded"_s;
+const QString KEY_TRACKER_NEXT_ANNOUNCE_TIME = u"next_announce_time"_s;
+const QString KEY_TRACKER_MIN_ANNOUNCE = u"min_announce"_s;
 
 // Web seed keys
 const QString KEY_WEBSEED_URL = u"url"_s;
@@ -238,7 +240,9 @@ namespace
             {KEY_TRACKER_PEERS_COUNT, 0},
             {KEY_TRACKER_DOWNLOADED_COUNT, 0},
             {KEY_TRACKER_SEEDS_COUNT, seedsDHT},
-            {KEY_TRACKER_LEECHES_COUNT, leechesDHT}
+            {KEY_TRACKER_LEECHES_COUNT, leechesDHT},
+            {KEY_TRACKER_NEXT_ANNOUNCE_TIME, 0},
+            {KEY_TRACKER_MIN_ANNOUNCE, 0}
         };
 
         const QJsonObject pex
@@ -250,7 +254,9 @@ namespace
             {KEY_TRACKER_PEERS_COUNT, 0},
             {KEY_TRACKER_DOWNLOADED_COUNT, 0},
             {KEY_TRACKER_SEEDS_COUNT, seedsPeX},
-            {KEY_TRACKER_LEECHES_COUNT, leechesPeX}
+            {KEY_TRACKER_LEECHES_COUNT, leechesPeX},
+            {KEY_TRACKER_NEXT_ANNOUNCE_TIME, 0},
+            {KEY_TRACKER_MIN_ANNOUNCE, 0}
         };
 
         const QJsonObject lsd
@@ -262,7 +268,9 @@ namespace
             {KEY_TRACKER_PEERS_COUNT, 0},
             {KEY_TRACKER_DOWNLOADED_COUNT, 0},
             {KEY_TRACKER_SEEDS_COUNT, seedsLSD},
-            {KEY_TRACKER_LEECHES_COUNT, leechesLSD}
+            {KEY_TRACKER_LEECHES_COUNT, leechesLSD},
+            {KEY_TRACKER_NEXT_ANNOUNCE_TIME, 0},
+            {KEY_TRACKER_MIN_ANNOUNCE, 0}
         };
 
         return {dht, pex, lsd};
@@ -277,6 +285,8 @@ namespace
             const bool isNotWorking = (tracker.state == BitTorrent::TrackerEndpointState::NotWorking)
                     || (tracker.state == BitTorrent::TrackerEndpointState::TrackerError)
                     || (tracker.state == BitTorrent::TrackerEndpointState::Unreachable);
+            const qint64 nextAnnounceTime = Utils::DateTime::toSecsSinceEpoch(tracker.nextAnnounceTime);
+            const qint64 minAnnounce = Utils::DateTime::toSecsSinceEpoch(tracker.minAnnounceTime);
             trackerList << QJsonObject
             {
                 {KEY_TRACKER_URL, tracker.url},
@@ -287,7 +297,9 @@ namespace
                 {KEY_TRACKER_PEERS_COUNT, tracker.numPeers},
                 {KEY_TRACKER_SEEDS_COUNT, tracker.numSeeds},
                 {KEY_TRACKER_LEECHES_COUNT, tracker.numLeeches},
-                {KEY_TRACKER_DOWNLOADED_COUNT, tracker.numDownloaded}
+                {KEY_TRACKER_DOWNLOADED_COUNT, tracker.numDownloaded},
+                {KEY_TRACKER_NEXT_ANNOUNCE_TIME, nextAnnounceTime},
+                {KEY_TRACKER_MIN_ANNOUNCE, minAnnounce}
             };
         }
 

@@ -129,7 +129,7 @@ window.qBittorrent.DynamicTable ??= (() => {
                 if (!tr) {
                     // clicking on the table body deselects all rows,
                     // unless the click was on a tracker tier button
-                    if(e.target.className === "trackerTierButton")
+                    if (e.target.className === "trackerTierButton")
                         return;
 
                     this.deselectAll();

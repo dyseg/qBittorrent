@@ -1697,7 +1697,7 @@ window.qBittorrent.DynamicTable ??= (() => {
                     if (row["full_data"].trackers_count > 0)
                         return false;
                     break;
-                
+
                 case TRACKERS_UNREGISTERED:
                     if (!row["full_data"]["has_unregistered_error"])
                         return false;
@@ -2105,7 +2105,7 @@ window.qBittorrent.DynamicTable ??= (() => {
             this.newColumn("message", "", "QBT_TR(Message)QBT_TR[CONTEXT=TrackerListWidget]", 250, true);
             this.newColumn("next_announce_time", "", "QBT_TR(Next Announce)QBT_TR[CONTEXT=TrackerListWidget]", 75, true);
             this.newColumn("min_announce", "", "QBT_TR(Min Announce)QBT_TR[CONTEXT=TrackerListWidget]", 75, true);
-            
+
             this.initColumnsFunctions();
         }
 

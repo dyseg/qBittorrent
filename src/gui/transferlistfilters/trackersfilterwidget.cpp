@@ -488,7 +488,7 @@ void TrackersFilterWidget::handleTrackerStatusesUpdated(const BitTorrent::Torren
                 if (unregisteredHashesIt != m_unregistered.end())
                     unregisteredHashesIt->remove(trackerEntryStatus.url);            }
             break;
-        
+
         case BitTorrent::TrackerEndpointState::Unregistered:
             {
                 if (unregisteredHashesIt == m_unregistered.end())

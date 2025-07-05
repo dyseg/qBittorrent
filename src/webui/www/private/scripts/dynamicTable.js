@@ -2186,21 +2186,19 @@ window.qBittorrent.DynamicTable ??= (() => {
                 td.title = status;
             };
 
-            function updateAnnounceTimeTd(td, row, column) {
+            const updateAnnounceTimeTd = (td, row, column) => {
                 const time = column.getRowValue(row);
-                var diff;
+                let diff = 0;
                 if (time > 0) {
                     const announceTime = new Date(time * 1000);
                     const now = new Date();
                     diff = (announceTime - now) / 1000;
                     diff = Math.max(diff, 0);
                 }
-                else
-                    diff = 0;
                 const formattedTime = window.qBittorrent.Misc.friendlyDuration(diff);
                 td.textContent = formattedTime;
                 td.title = formattedTime;
-            }
+            };
 
             this.columns["next_announce_time"].updateTd = function(td, row) {
                 updateAnnounceTimeTd(td, row, this);

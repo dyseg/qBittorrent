@@ -42,7 +42,9 @@ window.qBittorrent ??= {};
 window.qBittorrent.Dialog ??= (() => {
     const exports = () => {
         return {
-            baseModalOptions: baseModalOptions
+            baseModalOptions: baseModalOptions,
+            limitWidthToViewport: limitWidthToViewport,
+            limitHeightToViewport: limitHeightToViewport
         };
     };
 
@@ -68,6 +70,13 @@ window.qBittorrent.Dialog ??= (() => {
         deepFreezeSafe(obj);
     };
 
+    const limitWidthToViewport = (width) => {
+        return Math.min(width, window.innerWidth - 20);
+    };
+    const limitHeightToViewport = (height) => {
+        return Math.min(height, window.innerHeight - 75);
+    };
+
     const baseModalOptions = Object.assign(Object.create(null), {
         addClass: "modalDialog",
         collapsible: false,
@@ -86,7 +95,7 @@ window.qBittorrent.Dialog ??= (() => {
             left: 5
         },
         resizable: true,
-        width: 480,
+        width: limitWidthToViewport(480),
         onCloseComplete: () => {
             // make sure overlay is properly hidden upon modal closing
             document.getElementById("modalOverlay").style.display = "none";
@@ -156,11 +165,15 @@ const initializeWindows = () => {
         LocalPreferences.set(`window_${windowId}_height`, size.y);
     };
 
-    loadWindowWidth = (windowId, defaultValue) => {
+    loadWindowWidth = (windowId, defaultValue, limitToViewportWidth = true) => {
+        if (limitToViewportWidth)
+            defaultValue = window.qBittorrent.Dialog.limitWidthToViewport(defaultValue);
         return LocalPreferences.get(`window_${windowId}_width`, defaultValue);
     };
 
-    loadWindowHeight = (windowId, defaultValue) => {
+    loadWindowHeight = (windowId, defaultValue, limitToViewportHeight = true) => {
+        if (limitToViewportHeight)
+            defaultValue = window.qBittorrent.Dialog.limitHeightToViewport(defaultValue);
         return LocalPreferences.get(`window_${windowId}_height`, defaultValue);
     };
 
@@ -183,6 +196,7 @@ const initializeWindows = () => {
 
         if (urls && (urls.length > 0)) {
             contentURL.search = new URLSearchParams({
+                v: CACHEID,
                 urls: urls.map(encodeURIComponent).join("|")
             });
         }
@@ -218,7 +232,7 @@ const initializeWindows = () => {
             icon: "images/torrent-creator.svg",
             title: "QBT_TR(Torrent Creator)QBT_TR[CONTEXT=TorrentCreator]",
             loadMethod: "xhr",
-            contentURL: "views/torrentcreator.html",
+            contentURL: "views/torrentcreator.html?v=${CACHEID}",
             scrollbars: true,
             maximizable: true,
             paddingVertical: 0,
@@ -245,11 +259,11 @@ const initializeWindows = () => {
             title: "QBT_TR(Options)QBT_TR[CONTEXT=OptionsDialog]",
             loadMethod: "xhr",
             toolbar: true,
-            contentURL: "views/preferences.html",
+            contentURL: "views/preferences.html?v=${CACHEID}",
             require: {
-                css: ["css/Tabs.css"]
+                css: ["css/Tabs.css?v=${CACHEID}"]
             },
-            toolbarURL: "views/preferencesToolbar.html",
+            toolbarURL: "views/preferencesToolbar.html?v=${CACHEID}",
             maximizable: false,
             closable: true,
             paddingVertical: 0,
@@ -271,7 +285,7 @@ const initializeWindows = () => {
             id: id,
             title: "QBT_TR(Manage Cookies)QBT_TR[CONTEXT=CookiesDialog]",
             loadMethod: "xhr",
-            contentURL: "views/cookies.html",
+            contentURL: "views/cookies.html?v=${CACHEID}",
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
@@ -293,7 +307,7 @@ const initializeWindows = () => {
             icon: "images/qbittorrent-tray.svg",
             title: "QBT_TR(Upload local torrent)QBT_TR[CONTEXT=HttpServer]",
             loadMethod: "iframe",
-            contentURL: "upload.html",
+            contentURL: "upload.html?v=${CACHEID}",
             addClass: "windowFrame", // fixes iframe scrolling on iOS Safari
             scrollbars: true,
             maximizable: false,
@@ -311,6 +325,7 @@ const initializeWindows = () => {
     globalUploadLimitFN = () => {
         const contentURL = new URL("speedlimit.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             hashes: "global",
             type: "upload",
         });
@@ -325,7 +340,7 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 424,
+            width: window.qBittorrent.Dialog.limitWidthToViewport(424),
             height: 100
         });
     };
@@ -337,6 +352,7 @@ const initializeWindows = () => {
 
         const contentURL = new URL("speedlimit.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             hashes: hashes.join("|"),
             type: "upload",
         });
@@ -351,7 +367,7 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 424,
+            width: window.qBittorrent.Dialog.limitWidthToViewport(424),
             height: 100
         });
     };
@@ -369,7 +385,7 @@ const initializeWindows = () => {
             const hash = hashes[i];
             const row = torrentsTable.getRow(hash).full_data;
             const origValues = `${row.ratio_limit}|${row.seeding_time_limit}|${row.inactive_seeding_time_limit}|${row.max_ratio}`
-                + `|${row.max_seeding_time}|${row.max_inactive_seeding_time}`;
+                + `|${row.max_seeding_time}|${row.max_inactive_seeding_time}|${row.share_limit_action}`;
 
             // initialize value
             if (shareRatio === null)
@@ -383,6 +399,7 @@ const initializeWindows = () => {
 
         const contentURL = new URL("shareratio.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             hashes: hashes.join("|"),
             // if all torrents have same share ratio, display that share ratio. else use the default
             orig: torrentsHaveSameShareRatio ? shareRatio : ""
@@ -397,8 +414,8 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 424,
-            height: 220
+            width: window.qBittorrent.Dialog.limitWidthToViewport(500),
+            height: 250
         });
     };
 
@@ -459,6 +476,7 @@ const initializeWindows = () => {
     globalDownloadLimitFN = () => {
         const contentURL = new URL("speedlimit.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             hashes: "global",
             type: "download",
         });
@@ -473,7 +491,7 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 424,
+            width: window.qBittorrent.Dialog.limitWidthToViewport(424),
             height: 100
         });
     };
@@ -485,7 +503,7 @@ const initializeWindows = () => {
             icon: "images/qbittorrent-tray.svg",
             title: "QBT_TR(Statistics)QBT_TR[CONTEXT=StatsDialog]",
             loadMethod: "xhr",
-            contentURL: "views/statistics.html",
+            contentURL: "views/statistics.html?v=${CACHEID}",
             maximizable: false,
             padding: 10,
             width: loadWindowWidth(id, 285),
@@ -506,6 +524,7 @@ const initializeWindows = () => {
 
         const contentURL = new URL("speedlimit.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             hashes: hashes.join("|"),
             type: "download",
         });
@@ -520,7 +539,7 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 424,
+            width: window.qBittorrent.Dialog.limitWidthToViewport(424),
             height: 100
         });
     };
@@ -537,7 +556,7 @@ const initializeWindows = () => {
                         hashes: hashes,
                         forceDeleteFiles: forceDeleteFiles
                     },
-                    contentURL: "views/confirmdeletion.html",
+                    contentURL: "views/confirmdeletion.html?v=${CACHEID}",
                     onContentLoaded: (w) => {
                         MochaUI.resizeWindow(w, { centered: true });
                         MochaUI.centerWindow(w);
@@ -615,7 +634,7 @@ const initializeWindows = () => {
                         hashes: hashes,
                         enable: enableAutoTMM
                     },
-                    contentURL: "views/confirmAutoTMM.html"
+                    contentURL: "views/confirmAutoTMM.htm?v=${CACHEID}l"
                 });
             }
             else {
@@ -647,7 +666,7 @@ const initializeWindows = () => {
                     id: "confirmRecheckDialog",
                     title: "QBT_TR(Recheck confirmation)QBT_TR[CONTEXT=confirmRecheckDialog]",
                     data: { hashes: hashes },
-                    contentURL: "views/confirmRecheck.html"
+                    contentURL: "views/confirmRecheck.htm?v=${CACHEID}l"
                 });
             }
             else {
@@ -689,6 +708,7 @@ const initializeWindows = () => {
 
         const contentURL = new URL("setlocation.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             hashes: hashes.join("|"),
             path: encodeURIComponent(torrentsTable.getRow(hashes[0]).full_data.save_path)
         });
@@ -703,7 +723,7 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 400,
+            width: window.qBittorrent.Dialog.limitWidthToViewport(400),
             height: 130
         });
     };
@@ -719,6 +739,7 @@ const initializeWindows = () => {
 
         const contentURL = new URL("rename.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             hash: hashes[0],
             name: row.full_data.name
         });
@@ -733,7 +754,7 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 400,
+            width: window.qBittorrent.Dialog.limitWidthToViewport(400),
             height: 100
         });
     };
@@ -750,7 +771,7 @@ const initializeWindows = () => {
                     title: "QBT_TR(Renaming)QBT_TR[CONTEXT=TransferListWidget]",
                     data: { hash: hash, selectedRows: [] },
                     loadMethod: "xhr",
-                    contentURL: "rename_files.html",
+                    contentURL: "rename_files.html?v=${CACHEID}",
                     scrollbars: false,
                     resizable: true,
                     maximizable: false,
@@ -818,7 +839,7 @@ const initializeWindows = () => {
                         hashes: hashes,
                         isDeletingVisibleTorrents: true
                     },
-                    contentURL: "views/confirmdeletion.html",
+                    contentURL: "views/confirmdeletion.html?v=${CACHEID}",
                     onContentLoaded: (w) => {
                         MochaUI.resizeWindow(w, { centered: true });
                         MochaUI.centerWindow(w);
@@ -854,6 +875,7 @@ const initializeWindows = () => {
 
         const contentURL = new URL("newcategory.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             action: "set",
             hashes: hashes.join("|")
         });
@@ -868,8 +890,8 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 400,
-            height: 150
+            width: window.qBittorrent.Dialog.limitWidthToViewport(400),
+            height: 200
         });
     };
 
@@ -896,6 +918,7 @@ const initializeWindows = () => {
     createCategoryFN = () => {
         const contentURL = new URL("newcategory.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             action: "create"
         });
         new MochaUI.Window({
@@ -909,14 +932,15 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 400,
-            height: 150
+            width: window.qBittorrent.Dialog.limitWidthToViewport(400),
+            height: 200
         });
     };
 
     createSubcategoryFN = (category) => {
         const contentURL = new URL("newcategory.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             action: "createSubcategory",
             categoryName: `${category}/`
         });
@@ -931,17 +955,17 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 400,
-            height: 150
+            width: window.qBittorrent.Dialog.limitWidthToViewport(400),
+            height: 200
         });
     };
 
     editCategoryFN = (category) => {
         const contentURL = new URL("newcategory.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             action: "edit",
-            categoryName: category,
-            savePath: categoryMap.get(category).savePath
+            categoryName: category
         });
         new MochaUI.Window({
             id: "editCategoryPage",
@@ -954,8 +978,8 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 400,
-            height: 150
+            width: window.qBittorrent.Dialog.limitWidthToViewport(400),
+            height: 200
         });
     };
 
@@ -977,7 +1001,7 @@ const initializeWindows = () => {
 
     deleteUnusedCategoriesFN = () => {
         const categories = [];
-        for (const category of categoryMap.keys()) {
+        for (const category of window.qBittorrent.Client.categoryMap.keys()) {
             if (torrentsTable.getFilteredTorrentsNumber("all", category, TAGS_ALL, TRACKERS_ALL) === 0)
                 categories.push(category);
         }
@@ -1003,6 +1027,7 @@ const initializeWindows = () => {
 
         const contentURL = new URL("newtag.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             action: "set",
             hashes: hashes.join("|")
         });
@@ -1017,7 +1042,7 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 250,
+            width: window.qBittorrent.Dialog.limitWidthToViewport(250),
             height: 100
         });
     };
@@ -1051,6 +1076,7 @@ const initializeWindows = () => {
     createTagFN = () => {
         const contentURL = new URL("newtag.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             action: "create"
         });
         new MochaUI.Window({
@@ -1064,7 +1090,7 @@ const initializeWindows = () => {
             maximizable: false,
             paddingVertical: 0,
             paddingHorizontal: 0,
-            width: 250,
+            width: window.qBittorrent.Dialog.limitWidthToViewport(250),
             height: 100
         });
         updateMainData();
@@ -1082,7 +1108,7 @@ const initializeWindows = () => {
 
     deleteUnusedTagsFN = () => {
         const tags = [];
-        for (const tag of tagMap.keys()) {
+        for (const tag of window.qBittorrent.Client.tagMap.keys()) {
             if (torrentsTable.getFilteredTorrentsNumber("all", CATEGORIES_ALL, tag, TRACKERS_ALL) === 0)
                 tags.push(tag);
         }
@@ -1106,6 +1132,7 @@ const initializeWindows = () => {
 
         const contentURL = new URL("confirmtrackerdeletion.html", window.location);
         contentURL.search = new URLSearchParams({
+            v: CACHEID,
             host: trackerHost,
             urls: [...trackerMap.get(trackerHost).keys()].map(encodeURIComponent).join("|")
         });
@@ -1118,7 +1145,7 @@ const initializeWindows = () => {
             resizable: true,
             maximizable: false,
             padding: 10,
-            width: 424,
+            width: window.qBittorrent.Dialog.limitWidthToViewport(424),
             height: 100,
             onCloseComplete: () => {
                 updateMainData();
@@ -1299,12 +1326,12 @@ const initializeWindows = () => {
             icon: "images/qbittorrent-tray.svg",
             title: "QBT_TR(About qBittorrent)QBT_TR[CONTEXT=AboutDialog]",
             loadMethod: "xhr",
-            contentURL: "views/about.html",
+            contentURL: "views/about.html?v=${CACHEID}",
             require: {
-                css: ["css/Tabs.css"]
+                css: ["css/Tabs.css?v=${CACHEID}"]
             },
             toolbar: true,
-            toolbarURL: "views/aboutToolbar.html",
+            toolbarURL: "views/aboutToolbar.html?v=${CACHEID}",
             padding: 10,
             width: loadWindowWidth(id, 570),
             height: loadWindowHeight(id, 360),

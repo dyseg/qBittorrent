@@ -113,6 +113,10 @@ public:
     void showSpeedInTitleBar(bool show);
     bool useAlternatingRowColors() const;
     void setAlternatingRowColors(bool b);
+    bool useTorrentStatesColors() const;
+    void setUseTorrentStatesColors(bool value);
+    bool getProgressBarFollowsTextColor() const;
+    void setProgressBarFollowsTextColor(bool value);
     bool getHideZeroValues() const;
     void setHideZeroValues(bool b);
     int getHideZeroComboValues() const;

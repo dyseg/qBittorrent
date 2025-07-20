@@ -479,6 +479,10 @@ a.propButton img {
     vertical-align: top;
 }
 
+#torrentsFilterToolbar.invisible {
+    display: none;
+}
+
 #torrentsFilterInput {
     background-color: var(--color-background-default);
     background-image: url("../images/edit-find.svg");

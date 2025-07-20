@@ -118,13 +118,13 @@
                 icon: "images/qbittorrent-tray.svg",
                 title: "QBT_TR(Install plugin)QBT_TR[CONTEXT=PluginSourceDlg]",
                 loadMethod: "xhr",
-                contentURL: "views/installsearchplugin.html",
+                contentURL: "views/installsearchplugin.html?v=${CACHEID}",
                 scrollbars: false,
                 resizable: false,
                 maximizable: false,
                 paddingVertical: 0,
                 paddingHorizontal: 0,
-                width: 500,
+                width: window.qBittorrent.Dialog.limitWidthToViewport(500),
                 height: 120
             });
         };

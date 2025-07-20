@@ -130,14 +130,14 @@ namespace
 
 TransferListWidget::TransferListWidget(IGUIApplication *app, QWidget *parent)
     : GUIApplicationComponent(app, parent)
-    , m_listModel {new TransferListModel {this}}
-    , m_sortFilterModel {new TransferListSortModel {this}}
+    , m_listModel {new TransferListModel(this)}
+    , m_sortFilterModel {new TransferListSortModel(this)}
 {
     // Load settings
     const bool columnLoaded = loadSettings();
 
     // Create and apply delegate
-    setItemDelegate(new TransferListDelegate {this});
+    setItemDelegate(new TransferListDelegate(this));
 
     m_sortFilterModel->setDynamicSortFilter(true);
     m_sortFilterModel->setSourceModel(m_listModel);
@@ -650,7 +650,10 @@ void TransferListWidget::recheckSelectedTorrents()
 void TransferListWidget::reannounceSelectedTorrents()
 {
     for (BitTorrent::Torrent *const torrent : asConst(getSelectedTorrents()))
+    {
         torrent->forceReannounce();
+        torrent->forceDHTAnnounce();
+    }
 }
 
 int TransferListWidget::visibleColumnsCount() const

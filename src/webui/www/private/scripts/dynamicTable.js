@@ -1650,7 +1650,7 @@ window.qBittorrent.DynamicTable ??= (() => {
                             return false;
                     }
                     else {
-                        const selectedCategory = categoryMap.get(category);
+                        const selectedCategory = window.qBittorrent.Client.categoryMap.get(category);
                         if (selectedCategory !== undefined) {
                             const selectedCategoryName = `${category}/`;
                             const torrentCategoryName = `${row["full_data"].category}/`;
@@ -1842,6 +1842,11 @@ window.qBittorrent.DynamicTable ??= (() => {
 
         onSelectedRowChanged() {
             updatePropertiesPanel();
+        }
+
+        isStopped(hash) {
+            const row = this.getRow(hash);
+            return (row === undefined) ? true : row.full_data.state.includes("stopped");
         }
     }
 

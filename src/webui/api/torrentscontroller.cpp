@@ -1270,9 +1270,7 @@ void TorrentsController::editTrackerAction()
         throw APIError(APIErrorType::Conflict, u"Tracker not found"_s);
 
     torrent->replaceTrackers(entries);
-
-    if (!torrent->isStopped())
-        torrent->forceReannounce();
+    torrent->forceReannounce();
 
     setResult(QString());
 }
@@ -1461,18 +1459,21 @@ void TorrentsController::setDownloadLimitAction()
 
 void TorrentsController::setShareLimitsAction()
 {
-    requireParams({u"hashes"_s, u"ratioLimit"_s, u"seedingTimeLimit"_s, u"inactiveSeedingTimeLimit"_s});
+    requireParams({u"hashes"_s, u"ratioLimit"_s, u"seedingTimeLimit"_s, u"inactiveSeedingTimeLimit"_s, u"shareLimitAction"_s});
 
     const qreal ratioLimit = params()[u"ratioLimit"_s].toDouble();
     const qlonglong seedingTimeLimit = params()[u"seedingTimeLimit"_s].toLongLong();
     const qlonglong inactiveSeedingTimeLimit = params()[u"inactiveSeedingTimeLimit"_s].toLongLong();
+    const BitTorrent::ShareLimitAction shareLimitAction = Utils::String::toEnum(params()[u"shareLimitAction"_s], BitTorrent::ShareLimitAction::Default);
+
     const QStringList hashes = params()[u"hashes"_s].split(u'|');
 
-    applyToTorrents(hashes, [ratioLimit, seedingTimeLimit, inactiveSeedingTimeLimit](BitTorrent::Torrent *const torrent)
+    applyToTorrents(hashes, [ratioLimit, seedingTimeLimit, inactiveSeedingTimeLimit, shareLimitAction](BitTorrent::Torrent *const torrent)
     {
         torrent->setRatioLimit(ratioLimit);
         torrent->setSeedingTimeLimit(seedingTimeLimit);
         torrent->setInactiveSeedingTimeLimit(inactiveSeedingTimeLimit);
+        torrent->setShareLimitAction(shareLimitAction);
     });
 
     setResult(QString());
@@ -1719,7 +1720,31 @@ void TorrentsController::reannounceAction()
     requireParams({u"hashes"_s});
 
     const QStringList hashes {params()[u"hashes"_s].split(u'|')};
-    applyToTorrents(hashes, [](BitTorrent::Torrent *const torrent) { torrent->forceReannounce(); });
+    const QStringList urlsParam {params()[u"urls"_s].split(u'|', Qt::SkipEmptyParts)};
+
+    QSet<QString> urls;
+    urls.reserve(urlsParam.size());
+    for (const QString &urlStr : urlsParam)
+        urls << QUrl::fromPercentEncoding(urlStr.toLatin1());
+
+    applyToTorrents(hashes, [&urls](BitTorrent::Torrent *const torrent)
+    {
+        if (urls.isEmpty())
+        {
+            torrent->forceReannounce();
+            torrent->forceDHTAnnounce();
+        }
+        else
+        {
+            const QList<BitTorrent::TrackerEntryStatus> &trackers = torrent->trackers();
+            for (qsizetype i = 0; i < trackers.size(); ++i)
+            {
+                const BitTorrent::TrackerEntryStatus &status = trackers.at(i);
+                if (urls.contains(status.url))
+                    torrent->forceReannounce(i);
+            }
+        }
+    });
 
     setResult(QString());
 }

@@ -171,7 +171,7 @@ namespace
                             trackerEndpointStatus.state = TrackerEndpointState::Unreachable;
                             ++numUnreachable;
                         }
-                        else if (ltAnnounceInfo.message == "Not Found" || ltAnnounceInfo.message == "unregistered")
+                        else if (ltAnnounceInfo.message.find("Not Found") != std::string::npos || ltAnnounceInfo.message.find("unregistered") != std::string::npos)
                         {
                             trackerEndpointStatus.state = TrackerEndpointState::Unregistered;
                             ++numUnregistered;

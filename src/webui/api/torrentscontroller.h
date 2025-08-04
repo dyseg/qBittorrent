@@ -73,6 +73,7 @@ private slots:
     void recheckAction();
     void reannounceAction();
     void renameAction();
+    void setCommentAction();
     void setCategoryAction();
     void createCategoryAction();
     void editCategoryAction();

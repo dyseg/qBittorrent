@@ -88,9 +88,9 @@
 #include "base/net/dnsupdater.h"
 #endif
 
-#if defined Q_OS_MACOS || defined Q_OS_WIN
-#include "base/utils/os.h"
-#endif // defined Q_OS_MACOS || defined Q_OS_WIN
+#ifdef Q_OS_MACOS
+#include "macutilities.h"
+#endif
 
 #define SETTINGS_KEY(name) u"OptionsDialog/" name
 
@@ -290,6 +290,8 @@ void OptionsDialog::loadBehaviorTabOptions()
 
     m_ui->checkBoxHideZeroStatusFilters->setChecked(pref->getHideZeroStatusFilters());
 
+    m_ui->checkTorrentContentDrag->setChecked(pref->isTorrentContentDragEnabled());
+
 #ifndef Q_OS_WIN
     m_ui->checkStartup->setVisible(false);
 #endif
@@ -329,9 +331,9 @@ void OptionsDialog::loadBehaviorTabOptions()
 
 #ifdef Q_OS_MACOS
     m_ui->checkShowSystray->setVisible(false);
-    m_ui->checkAssociateTorrents->setChecked(Utils::OS::isTorrentFileAssocSet());
+    m_ui->checkAssociateTorrents->setChecked(MacUtils::isTorrentFileAssocSet());
     m_ui->checkAssociateTorrents->setEnabled(!m_ui->checkAssociateTorrents->isChecked());
-    m_ui->checkAssociateMagnetLinks->setChecked(Utils::OS::isMagnetLinkAssocSet());
+    m_ui->checkAssociateMagnetLinks->setChecked(MacUtils::isMagnetLinkAssocSet());
     m_ui->checkAssociateMagnetLinks->setEnabled(!m_ui->checkAssociateMagnetLinks->isChecked());
 #endif
 
@@ -401,6 +403,8 @@ void OptionsDialog::loadBehaviorTabOptions()
     connect(m_ui->actionTorrentDlOnDblClBox, qComboBoxCurrentIndexChanged, this, &ThisType::enableApplyButton);
     connect(m_ui->actionTorrentFnOnDblClBox, qComboBoxCurrentIndexChanged, this, &ThisType::enableApplyButton);
     connect(m_ui->checkBoxHideZeroStatusFilters, &QAbstractButton::toggled, this, &ThisType::enableApplyButton);
+
+    connect(m_ui->checkTorrentContentDrag, &QAbstractButton::toggled, this, &ThisType::enableApplyButton);
 
 #ifdef Q_OS_WIN
     connect(m_ui->checkStartup, &QAbstractButton::toggled, this, &ThisType::enableApplyButton);
@@ -499,6 +503,8 @@ void OptionsDialog::saveBehaviorTabOptions() const
 
     pref->setHideZeroStatusFilters(m_ui->checkBoxHideZeroStatusFilters->isChecked());
 
+    pref->setTorrentContentDragEnabled(m_ui->checkTorrentContentDrag->isChecked());
+
     pref->setSplashScreenDisabled(isSplashScreenDisabled());
     pref->setConfirmOnExit(m_ui->checkProgramExitConfirm->isChecked());
     pref->setDontConfirmAutoExit(!m_ui->checkProgramAutoExitConfirm->isChecked());
@@ -517,14 +523,14 @@ void OptionsDialog::saveBehaviorTabOptions() const
 #ifdef Q_OS_MACOS
     if (m_ui->checkAssociateTorrents->isChecked())
     {
-        Utils::OS::setTorrentFileAssoc();
-        m_ui->checkAssociateTorrents->setChecked(Utils::OS::isTorrentFileAssocSet());
+        MacUtils::setTorrentFileAssoc();
+        m_ui->checkAssociateTorrents->setChecked(MacUtils::isTorrentFileAssocSet());
         m_ui->checkAssociateTorrents->setEnabled(!m_ui->checkAssociateTorrents->isChecked());
     }
     if (m_ui->checkAssociateMagnetLinks->isChecked())
     {
-        Utils::OS::setMagnetLinkAssoc();
-        m_ui->checkAssociateMagnetLinks->setChecked(Utils::OS::isMagnetLinkAssocSet());
+        MacUtils::setMagnetLinkAssoc();
+        m_ui->checkAssociateMagnetLinks->setChecked(MacUtils::isMagnetLinkAssocSet());
         m_ui->checkAssociateMagnetLinks->setEnabled(!m_ui->checkAssociateMagnetLinks->isChecked());
     }
 #endif
@@ -1868,7 +1874,7 @@ void OptionsDialog::setLocale(const QString &localeStr)
     if (index < 0)
     {
         //Attempt to find a language match without a country
-        const int pos = name.indexOf(u'_');
+        const qsizetype pos = name.indexOf(u'_');
         if (pos > -1)
         {
             const QString lang = name.first(pos);

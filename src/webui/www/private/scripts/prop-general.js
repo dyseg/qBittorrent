@@ -239,6 +239,12 @@ window.qBittorrent.PropGeneral ??= (() => {
                 }
                 clearTimeout(loadTorrentDataTimer);
                 loadTorrentDataTimer = loadTorrentData.delay(5000);
+            }, (error) => {
+                console.error(error);
+
+                document.getElementById("error_div").textContent = "QBT_TR(qBittorrent client is not reachable)QBT_TR[CONTEXT=HttpServer]";
+                clearTimeout(loadTorrentDataTimer);
+                loadTorrentDataTimer = loadTorrentData.delay(10000);
             });
 
         const pieceStatesURL = new URL("api/v2/torrents/pieceStates", window.location);
@@ -267,6 +273,12 @@ window.qBittorrent.PropGeneral ??= (() => {
 
                 clearTimeout(loadTorrentDataTimer);
                 loadTorrentDataTimer = loadTorrentData.delay(5000);
+            }, (error) => {
+                console.error(error);
+
+                document.getElementById("error_div").textContent = "QBT_TR(qBittorrent client is not reachable)QBT_TR[CONTEXT=HttpServer]";
+                clearTimeout(loadTorrentDataTimer);
+                loadTorrentDataTimer = loadTorrentData.delay(10000);
             });
     };
 

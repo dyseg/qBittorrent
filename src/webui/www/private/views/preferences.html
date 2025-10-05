@@ -1797,6 +1797,8 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             };
         };
 
+        const localPreferences = new window.qBittorrent.LocalPreferences.LocalPreferences();
+
         // Behavior tab
         const numberInputLimiter = (input) => {
             const inputNumber = Number(input.value);
@@ -2144,7 +2146,8 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
 
         // Advanced Tab
         const updateNetworkInterfaces = (default_iface, default_iface_name) => {
-            [...document.getElementById("networkInterface").children].forEach((el) => { el.remove(); });
+            for (const el of [...document.getElementById("networkInterface").children])
+                el.remove();
 
             fetch("api/v2/app/networkInterfaceList", {
                     method: "GET",
@@ -2165,15 +2168,15 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
                         ifaces.push({ name: default_iface_name || default_iface, value: default_iface });
 
                     document.getElementById("networkInterface").options.add(new Option("QBT_TR(Any interface)QBT_TR[CONTEXT=OptionsDialog]", ""));
-                    ifaces.forEach((item, index) => {
+                    for (const item of ifaces)
                         document.getElementById("networkInterface").options.add(new Option(item.name, item.value));
-                    });
                     document.getElementById("networkInterface").value = default_iface;
                 });
         };
 
         const updateInterfaceAddresses = (iface, default_addr) => {
-            [...document.getElementById("optionalIPAddressToBind").children].forEach((el) => { el.remove(); });
+            for (const el of [...document.getElementById("optionalIPAddressToBind").children])
+                el.remove();
 
             const url = new URL("api/v2/app/networkInterfaceAddressList", window.location);
             url.search = new URLSearchParams({
@@ -2196,16 +2199,15 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
                     document.getElementById("optionalIPAddressToBind").options.add(new Option("QBT_TR(All addresses)QBT_TR[CONTEXT=OptionDialog]", ""));
                     document.getElementById("optionalIPAddressToBind").options.add(new Option("QBT_TR(All IPv4 addresses)QBT_TR[CONTEXT=OptionDialog]", "0.0.0.0"));
                     document.getElementById("optionalIPAddressToBind").options.add(new Option("QBT_TR(All IPv6 addresses)QBT_TR[CONTEXT=OptionDialog]", "::"));
-                    addresses.forEach((item, index) => {
+                    for (const item of addresses)
                         document.getElementById("optionalIPAddressToBind").options.add(new Option(item, item));
-                    });
                     document.getElementById("optionalIPAddressToBind").value = default_addr;
                 });
         };
 
         const updateWebuiLocaleSelect = (selected) => {
             const languages = [];
-            for (let i = 0; i < document.getElementById("locale_select").options.length; i++)
+            for (let i = 0; i < document.getElementById("locale_select").options.length; ++i)
                 languages.push(document.getElementById("locale_select").options[i].value);
 
             if (!languages.includes(selected)) {
@@ -2217,7 +2219,7 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
 
         const updateColoSchemeSelect = () => {
             const combobox = document.getElementById("colorSchemeSelect");
-            const colorScheme = LocalPreferences.get("color_scheme");
+            const colorScheme = localPreferences.get("color_scheme");
 
             if (colorScheme === "light")
                 combobox.options[1].selected = true;
@@ -2228,22 +2230,22 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
         };
 
         const loadPreferences = () => {
-            window.parent.qBittorrent.Cache.preferences.init({
-                onSuccess: (pref) => {
+            window.parent.qBittorrent.Cache.preferences.init()
+                .then((pref) => {
                     // Behavior tab
                     // Language
                     updateWebuiLocaleSelect(pref.locale);
                     updateColoSchemeSelect();
                     document.getElementById("statusBarExternalIP").checked = pref.status_bar_external_ip;
                     document.getElementById("performanceWarning").checked = pref.performance_warning;
-                    document.getElementById("displayFullURLTrackerColumn").checked = (LocalPreferences.get("full_url_tracker_column", "false") === "true");
-                    document.getElementById("useVirtualList").checked = (LocalPreferences.get("use_virtual_list", "false") === "true");
-                    document.getElementById("hideZeroFiltersCheckbox").checked = (LocalPreferences.get("hide_zero_status_filters", "false") === "true");
-                    document.getElementById("dblclickDownloadSelect").value = LocalPreferences.get("dblclick_download", "1");
-                    document.getElementById("dblclickCompleteSelect").value = LocalPreferences.get("dblclick_complete", "1");
-                    document.getElementById("dblclickFiltersSelect").value = LocalPreferences.get("dblclick_filter", "1");
+                    document.getElementById("displayFullURLTrackerColumn").checked = (localPreferences.get("full_url_tracker_column", "false") === "true");
+                    document.getElementById("useVirtualList").checked = (localPreferences.get("use_virtual_list", "false") === "true");
+                    document.getElementById("hideZeroFiltersCheckbox").checked = (localPreferences.get("hide_zero_status_filters", "false") === "true");
+                    document.getElementById("dblclickDownloadSelect").value = localPreferences.get("dblclick_download", "1");
+                    document.getElementById("dblclickCompleteSelect").value = localPreferences.get("dblclick_complete", "1");
+                    document.getElementById("dblclickFiltersSelect").value = localPreferences.get("dblclick_filter", "1");
                     document.getElementById("confirmTorrentDeletion").checked = pref.confirm_torrent_deletion;
-                    document.getElementById("useAltRowColorsInput").checked = (LocalPreferences.get("use_alt_row_colors", "true") === "true");
+                    document.getElementById("useAltRowColorsInput").checked = (localPreferences.get("use_alt_row_colors", "true") === "true");
                     document.getElementById("filelog_checkbox").checked = pref.file_log_enabled;
                     document.getElementById("filelog_save_path_input").value = pref.file_log_path;
                     document.getElementById("filelog_backup_checkbox").checked = pref.file_log_backup_enabled;
@@ -2650,8 +2652,10 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
                     document.getElementById("i2pOutboundQuantity").value = pref.i2p_outbound_quantity;
                     document.getElementById("i2pInboundLength").value = pref.i2p_inbound_length;
                     document.getElementById("i2pOutboundLength").value = pref.i2p_outbound_length;
-                }
-            });
+                }).catch((error) => {
+                    console.error(error);
+                    alert("QBT_TR(Unable to load program preferences, qBittorrent is probably unreachable.)QBT_TR[CONTEXT=HttpServer]");
+                });
         };
 
         const applyPreferences = () => {
@@ -2663,21 +2667,21 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             settings["locale"] = document.getElementById("locale_select").value;
             const colorScheme = Number(document.getElementById("colorSchemeSelect").value);
             if (colorScheme === 0)
-                LocalPreferences.remove("color_scheme");
+                localPreferences.remove("color_scheme");
             else if (colorScheme === 1)
-                LocalPreferences.set("color_scheme", "light");
+                localPreferences.set("color_scheme", "light");
             else
-                LocalPreferences.set("color_scheme", "dark");
+                localPreferences.set("color_scheme", "dark");
             settings["status_bar_external_ip"] = document.getElementById("statusBarExternalIP").checked;
             settings["performance_warning"] = document.getElementById("performanceWarning").checked;
-            LocalPreferences.set("full_url_tracker_column", document.getElementById("displayFullURLTrackerColumn").checked.toString());
-            LocalPreferences.set("use_virtual_list", document.getElementById("useVirtualList").checked.toString());
-            LocalPreferences.set("hide_zero_status_filters", document.getElementById("hideZeroFiltersCheckbox").checked.toString());
-            LocalPreferences.set("dblclick_download", document.getElementById("dblclickDownloadSelect").value);
-            LocalPreferences.set("dblclick_complete", document.getElementById("dblclickCompleteSelect").value);
-            LocalPreferences.set("dblclick_filter", document.getElementById("dblclickFiltersSelect").value);
+            localPreferences.set("full_url_tracker_column", document.getElementById("displayFullURLTrackerColumn").checked.toString());
+            localPreferences.set("use_virtual_list", document.getElementById("useVirtualList").checked.toString());
+            localPreferences.set("hide_zero_status_filters", document.getElementById("hideZeroFiltersCheckbox").checked.toString());
+            localPreferences.set("dblclick_download", document.getElementById("dblclickDownloadSelect").value);
+            localPreferences.set("dblclick_complete", document.getElementById("dblclickCompleteSelect").value);
+            localPreferences.set("dblclick_filter", document.getElementById("dblclickFiltersSelect").value);
             settings["confirm_torrent_deletion"] = document.getElementById("confirmTorrentDeletion").checked;
-            LocalPreferences.set("use_alt_row_colors", document.getElementById("useAltRowColorsInput").checked.toString());
+            localPreferences.set("use_alt_row_colors", document.getElementById("useAltRowColorsInput").checked.toString());
             settings["file_log_enabled"] = document.getElementById("filelog_checkbox").checked;
             settings["file_log_path"] = document.getElementById("filelog_save_path_input").value;
             settings["file_log_backup_enabled"] = document.getElementById("filelog_backup_checkbox").checked;
@@ -2926,7 +2930,7 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             let maxRatio = -1;
             if (document.getElementById("maxRatioCheckbox").checked) {
                 maxRatio = Number(document.getElementById("maxRatioValue").value);
-                if (isNaN(maxRatio) || (maxRatio < 0)) {
+                if (Number.isNaN(maxRatio) || (maxRatio < 0)) {
                     alert("QBT_TR(Share ratio limit must not have a negative value.)QBT_TR[CONTEXT=HttpServer]");
                     return;
                 }
@@ -3169,18 +3173,15 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             settings["i2p_outbound_length"] = Number(document.getElementById("i2pOutboundLength").value);
 
             // Send it to qBT
-            window.parent.qBittorrent.Cache.preferences.set({
-                data: settings,
-                onFailure: () => {
-                    alert("QBT_TR(Unable to save program preferences, qBittorrent is probably unreachable.)QBT_TR[CONTEXT=HttpServer]");
-                    window.parent.qBittorrent.Client.closeWindow(document.getElementById("preferencesPage"));
-                },
-                onSuccess: () => {
+            window.parent.qBittorrent.Cache.preferences.set(settings)
+                .then(() => {
                     // Close window
                     window.parent.location.reload();
                     window.parent.qBittorrent.Client.closeWindow(document.getElementById("preferencesPage"));
-                }
-            });
+                }).catch((error) => {
+                    alert("QBT_TR(Unable to save program preferences, qBittorrent is probably unreachable.)QBT_TR[CONTEXT=HttpServer]");
+                    window.parent.qBittorrent.Client.closeWindow(document.getElementById("preferencesPage"));
+                });
         };
 
         const setup = () => {

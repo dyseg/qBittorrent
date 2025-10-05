@@ -372,6 +372,19 @@ void Preferences::setToolbarDisplayed(const bool displayed)
     setValue(u"Preferences/General/ToolbarDisplayed"_s, displayed);
 }
 
+bool Preferences::isTorrentContentDragEnabled() const
+{
+    return value(u"Preferences/General/TorrentContentDragEnabled"_s, false);
+}
+
+void Preferences::setTorrentContentDragEnabled(const bool enabled)
+{
+    if (enabled == isTorrentContentDragEnabled())
+        return;
+
+    setValue(u"Preferences/General/TorrentContentDragEnabled"_s, enabled);
+}
+
 bool Preferences::isStatusbarDisplayed() const
 {
     return value(u"Preferences/General/StatusbarDisplayed"_s, true);
@@ -922,19 +935,6 @@ void Preferences::setWebUISessionTimeout(const int timeout)
         return;
 
     setValue(u"Preferences/WebUI/SessionTimeout"_s, timeout);
-}
-
-QString Preferences::getWebAPISessionCookieName() const
-{
-    return value<QString>(u"WebAPI/SessionCookieName"_s);
-}
-
-void Preferences::setWebAPISessionCookieName(const QString &cookieName)
-{
-    if (cookieName == getWebAPISessionCookieName())
-        return;
-
-    setValue(u"WebAPI/SessionCookieName"_s, cookieName);
 }
 
 bool Preferences::isWebUIClickjackingProtectionEnabled() const

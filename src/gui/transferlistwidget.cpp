@@ -526,6 +526,19 @@ void TransferListWidget::copySelectedNames() const
     qApp->clipboard()->setText(torrentNames.join(u'\n'));
 }
 
+void TransferListWidget::copyContentPaths() const
+{
+    QStringList contentPaths;
+    for (BitTorrent::Torrent *const torrent : asConst(getSelectedTorrents()))
+    {
+        const Path contentPath = torrent->contentPath();
+        if (!contentPath.isEmpty())
+            contentPaths << contentPath.toString();
+    }
+
+    qApp->clipboard()->setText(contentPaths.join(u'\n'));
+}
+
 void TransferListWidget::copySelectedInfohashes(const CopyInfohashPolicy policy) const
 {
     const auto selectedTorrents = getSelectedTorrents();
@@ -824,21 +837,21 @@ void TransferListWidget::exportTorrent()
         bool hasError = false;
         for (const BitTorrent::Torrent *torrent : torrents)
         {
-            const QString validName = Utils::Fs::toValidFileName(torrent->name(), u"_"_s);
-            const Path filePath = savePath / Path(validName + u".torrent");
-            if (filePath.exists())
+            const QString validName = Utils::Fs::toValidFileName(torrent->name());
+            QString torrentExportFilename = u"%1.torrent"_s.arg(validName);
+            Path newTorrentPath = savePath / Path(torrentExportFilename);
+            int counter = 0;
+            while (newTorrentPath.exists())
             {
-                LogMsg(errorMsg.arg(torrent->name(), filePath.toString(), tr("A file with the same name already exists")) , Log::WARNING);
-                hasError = true;
-                continue;
+                // Append number to torrent name to make it unique
+                torrentExportFilename = u"%1 (%2).torrent"_s.arg(validName).arg(++counter);
+                newTorrentPath = savePath / Path(torrentExportFilename);
             }
 
-            const nonstd::expected<void, QString> result = torrent->exportToFile(filePath);
-            if (!result)
+            if (const nonstd::expected<void, QString> result = torrent->exportToFile(newTorrentPath); !result)
             {
-                LogMsg(errorMsg.arg(torrent->name(), filePath.toString(), result.error()) , Log::WARNING);
+                LogMsg(errorMsg.arg(torrent->name(), newTorrentPath.toString(), result.error()) , Log::WARNING);
                 hasError = true;
-                continue;
             }
         }
 
@@ -1001,6 +1014,8 @@ void TransferListWidget::displayListMenu()
     connect(actionCopyHash1, &QAction::triggered, this, [this]() { copySelectedInfohashes(CopyInfohashPolicy::Version1); });
     auto *actionCopyHash2 = new QAction(UIThemeManager::instance()->getIcon(u"hash"_s, u"edit-copy"_s), tr("Info h&ash v2"), listMenu);
     connect(actionCopyHash2, &QAction::triggered, this, [this]() { copySelectedInfohashes(CopyInfohashPolicy::Version2); });
+    auto *actionCopyContentPath = new QAction(UIThemeManager::instance()->getIcon(u"directory"_s, u"edit-copy"_s), tr("Content &Path"), listMenu);
+    connect(actionCopyContentPath, &QAction::triggered, this, &TransferListWidget::copyContentPaths);
     auto *actionSuperSeedingMode = new TriStateAction(tr("Super seeding mode"), listMenu);
     connect(actionSuperSeedingMode, &QAction::triggered, this, &TransferListWidget::setSelectedTorrentsSuperSeeding);
     auto *actionRename = new QAction(UIThemeManager::instance()->getIcon(u"edit-rename"_s), tr("Re&name..."), listMenu);
@@ -1283,6 +1298,7 @@ void TransferListWidget::displayListMenu()
     copySubMenu->addAction(actionCopyMagnetLink);
     copySubMenu->addAction(actionCopyID);
     copySubMenu->addAction(actionCopyComment);
+    copySubMenu->addAction(actionCopyContentPath);
 
     actionExportTorrent->setToolTip(tr("Exported torrent is not necessarily the same as the imported"));
     listMenu->addAction(actionExportTorrent);

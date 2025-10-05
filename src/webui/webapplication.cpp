@@ -43,6 +43,7 @@
 #include <QNetworkCookie>
 #include <QRegularExpression>
 #include <QThread>
+#include <QTimer>
 #include <QUrl>
 
 #include "base/algorithm.h"
@@ -60,6 +61,7 @@
 #include "api/apierror.h"
 #include "api/appcontroller.h"
 #include "api/authcontroller.h"
+#include "api/clientdatacontroller.h"
 #include "api/logcontroller.h"
 #include "api/rsscontroller.h"
 #include "api/searchcontroller.h"
@@ -67,9 +69,10 @@
 #include "api/torrentcreatorcontroller.h"
 #include "api/torrentscontroller.h"
 #include "api/transfercontroller.h"
+#include "clientdatastorage.h"
 
 const int MAX_ALLOWED_FILESIZE = 10 * 1024 * 1024;
-const QString DEFAULT_SESSION_COOKIE_NAME = u"SID"_s;
+const QString SESSION_COOKIE_NAME_PREFIX = u"QBT_SID_"_s;
 
 const QString WWW_FOLDER = u":/www"_s;
 const QString PUBLIC_FOLDER = u"/public"_s;
@@ -86,7 +89,7 @@ namespace
 
         for (const auto &cookie : cookies)
         {
-            const int idx = cookie.indexOf(u'=');
+            const qsizetype idx = cookie.indexOf(u'=');
             if (idx < 0)
                 continue;
 
@@ -139,18 +142,6 @@ namespace
 
         return languages.join(u'\n');
     }
-
-    bool isValidCookieName(const QString &cookieName)
-    {
-        if (cookieName.isEmpty() || (cookieName.size() > 128))
-            return false;
-
-        const QRegularExpression invalidNameRegex {u"[^a-zA-Z0-9_\\-]"_s};
-        if (invalidNameRegex.match(cookieName).hasMatch())
-            return false;
-
-        return true;
-    }
 }
 
 WebApplication::WebApplication(IApplication *app, QObject *parent)
@@ -158,22 +149,12 @@ WebApplication::WebApplication(IApplication *app, QObject *parent)
     , m_cacheID {QString::number(Utils::Random::rand(), 36)}
     , m_authController {new AuthController(this, app, this)}
     , m_torrentCreationManager {new BitTorrent::TorrentCreationManager(app, this)}
+    , m_clientDataStorage {new ClientDataStorage(this)}
 {
     declarePublicAPI(u"auth/login"_s);
 
     configure();
     connect(Preferences::instance(), &Preferences::changed, this, &WebApplication::configure);
-
-    m_sessionCookieName = Preferences::instance()->getWebAPISessionCookieName();
-    if (!isValidCookieName(m_sessionCookieName))
-    {
-        if (!m_sessionCookieName.isEmpty())
-        {
-            LogMsg(tr("Unacceptable session cookie name is specified: '%1'. Default one is used.")
-                   .arg(m_sessionCookieName), Log::WARNING);
-        }
-        m_sessionCookieName = DEFAULT_SESSION_COOKIE_NAME;
-    }
 }
 
 WebApplication::~WebApplication()
@@ -250,9 +231,9 @@ void WebApplication::translateDocument(QString &data) const
 {
     const QRegularExpression regex(u"QBT_TR\\((([^\\)]|\\)(?!QBT_TR))+)\\)QBT_TR\\[CONTEXT=([a-zA-Z_][a-zA-Z0-9_]*)\\]"_s);
 
-    int i = 0;
+    qsizetype i = 0;
     bool found = true;
-    while (i < data.size() && found)
+    while ((i < data.size()) && found)
     {
         QRegularExpressionMatch regexMatch;
         i = data.indexOf(regex, i, &regexMatch);
@@ -415,6 +396,8 @@ void WebApplication::doProcessRequest()
             throw ConflictHTTPError(error.message());
         case APIErrorType::NotFound:
             throw NotFoundHTTPError(error.message());
+        case APIErrorType::Unauthorized:
+            throw UnauthorizedHTTPError(error.message());
         default:
             Q_UNREACHABLE();
             break;
@@ -461,6 +444,7 @@ void WebApplication::configure()
     m_isAuthSubnetWhitelistEnabled = pref->isWebUIAuthSubnetWhitelistEnabled();
     m_authSubnetWhitelist = pref->getWebUIAuthSubnetWhitelist();
     m_sessionTimeout = pref->getWebUISessionTimeout();
+    m_sessionCookieName = SESSION_COOKIE_NAME_PREFIX + QString::number(pref->getWebUIPort());
 
     m_domainList = pref->getServerDomains().split(u';', Qt::SkipEmptyParts);
     std::for_each(m_domainList.begin(), m_domainList.end(), [](QString &entry) { entry = entry.trimmed(); });
@@ -500,7 +484,7 @@ void WebApplication::configure()
 
         for (const QStringView line : customHeaderLines)
         {
-            const int idx = line.indexOf(u':');
+            const qsizetype idx = line.indexOf(u':');
             if (idx < 0)
             {
                 // require separator `:` to be present even if `value` field can be empty
@@ -742,6 +726,7 @@ void WebApplication::sessionStart()
         request().headers.value(u"user-agent"_s)));
 
     m_currentSession->registerAPIController(u"app"_s, new AppController(app(), m_currentSession));
+    m_currentSession->registerAPIController(u"clientdata"_s, new ClientDataController(m_clientDataStorage, app(), m_currentSession));
     m_currentSession->registerAPIController(u"log"_s, new LogController(app(), m_currentSession));
     m_currentSession->registerAPIController(u"torrentcreator"_s, new TorrentCreatorController(m_torrentCreationManager, app(), m_currentSession));
     m_currentSession->registerAPIController(u"rss"_s, new RSSController(app(), m_currentSession));
@@ -934,7 +919,7 @@ WebSession::WebSession(const QString &sid, const qint64 expiration, IApplication
     , m_sid {sid}
     , m_timer {new QTimer(this)}
 {
-    m_timer->callOnTimeout([this]
+    connect(m_timer, &QTimer::timeout, this, [this]
     {
         emit expired(m_sid);
     });

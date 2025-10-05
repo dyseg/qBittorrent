@@ -43,6 +43,8 @@ window.qBittorrent.Client ??= (() => {
             isShowSearchEngine: isShowSearchEngine,
             isShowRssReader: isShowRssReader,
             isShowLogViewer: isShowLogViewer,
+            createAddTorrentWindow: createAddTorrentWindow,
+            uploadTorrentFiles: uploadTorrentFiles,
             categoryMap: categoryMap,
             tagMap: tagMap
         };
@@ -128,6 +130,80 @@ window.qBittorrent.Client ??= (() => {
         return showingLogViewer;
     };
 
+    const createAddTorrentWindow = (title, source, metadata = undefined, downloader = undefined) => {
+        const isFirefox = navigator.userAgent.includes("Firefox");
+        const isSafari = navigator.userAgent.includes("AppleWebKit") && !navigator.userAgent.includes("Chrome");
+        let height = 855;
+        if (isSafari)
+            height -= 40;
+        else if (isFirefox)
+            height -= 10;
+
+        const staticId = "uploadPage";
+        const id = `${staticId}-${encodeURIComponent(source)}`;
+
+        const contentURL = new URL("addtorrent.html", window.location);
+        contentURL.search = new URLSearchParams({
+            v: "${CACHEID}",
+            source: source,
+            fetch: metadata === undefined,
+            windowId: id,
+            downloader: downloader ?? ""
+        });
+
+        new MochaUI.Window({
+            id: id,
+            icon: "images/qbittorrent-tray.svg",
+            title: title,
+            loadMethod: "iframe",
+            contentURL: contentURL.toString(),
+            scrollbars: true,
+            maximizable: false,
+            paddingVertical: 0,
+            paddingHorizontal: 0,
+            width: loadWindowWidth(staticId, 980),
+            height: loadWindowHeight(staticId, height),
+            onResize: window.qBittorrent.Misc.createDebounceHandler(500, (e) => {
+                saveWindowSize(staticId, id);
+            }),
+            onContentLoaded: () => {
+                if (metadata !== undefined)
+                    document.getElementById(`${id}_iframe`).contentWindow.postMessage(metadata, window.origin);
+            }
+        });
+    };
+
+    const uploadTorrentFiles = (files) => {
+        const fileNames = [];
+        const formData = new FormData();
+        for (const [i, file] of Array.prototype.entries.call(files)) {
+            fileNames.push(file.name);
+            // send dummy file name as file name won't be used and may not be encoded properly
+            formData.append("file", file, i);
+        }
+
+        fetch("api/v2/torrents/parseMetadata", {
+                method: "POST",
+                body: formData
+            })
+            .then(async (response) => {
+                if (!response.ok) {
+                    alert(await response.text());
+                    return;
+                }
+
+                const json = await response.json();
+                for (const [i, metadata] of json.entries()) {
+                    const title = metadata.name || fileNames[i];
+                    const hash = metadata.infohash_v2 || metadata.infohash_v1;
+                    createAddTorrentWindow(title, hash, metadata);
+                }
+            })
+            .catch((error) => {
+                alert(`QBT_TR(Unable to parse response.)QBT_TR[CONTEXT=HttpServer] ${error.toString()}`);
+            });
+    };
+
     return exports();
 })();
 Object.freeze(window.qBittorrent.Client);
@@ -135,6 +211,7 @@ Object.freeze(window.qBittorrent.Client);
 window.qBittorrent.Client.setup();
 
 // TODO: move global functions/variables into some namespace/scope
+const localPreferences = new window.qBittorrent.LocalPreferences.LocalPreferences();
 
 this.torrentsTable = new window.qBittorrent.DynamicTable.TorrentsTable();
 
@@ -146,21 +223,21 @@ let queueing_enabled = true;
 let serverSyncMainDataInterval = 1500;
 let customSyncMainDataInterval = null;
 let useSubcategories = true;
-const useAutoHideZeroStatusFilters = LocalPreferences.get("hide_zero_status_filters", "false") === "true";
-const displayFullURLTrackerColumn = LocalPreferences.get("full_url_tracker_column", "false") === "true";
+const useAutoHideZeroStatusFilters = localPreferences.get("hide_zero_status_filters", "false") === "true";
+const displayFullURLTrackerColumn = localPreferences.get("full_url_tracker_column", "false") === "true";
 
 /* Categories filter */
 const CATEGORIES_ALL = "b4af0e4c-e76d-4bac-a392-46cbc18d9655";
 const CATEGORIES_UNCATEGORIZED = "e24bd469-ea22-404c-8e2e-a17c82f37ea0";
 
-let selectedCategory = LocalPreferences.get("selected_category", CATEGORIES_ALL);
+let selectedCategory = localPreferences.get("selected_category", CATEGORIES_ALL);
 let setCategoryFilter = () => {};
 
 /* Tags filter */
 const TAGS_ALL = "b4af0e4c-e76d-4bac-a392-46cbc18d9655";
 const TAGS_UNTAGGED = "e24bd469-ea22-404c-8e2e-a17c82f37ea0";
 
-let selectedTag = LocalPreferences.get("selected_tag", TAGS_ALL);
+let selectedTag = localPreferences.get("selected_tag", TAGS_ALL);
 let setTagFilter = () => {};
 
 /* Trackers filter */
@@ -174,11 +251,11 @@ const TRACKERS_UNREGISTERED = "81d6f0aa-9359-4b81-a369-38b612590730";
 // Map<trackerHost: String, Map<trackerURL: String, torrents: Set>>
 const trackerMap = new Map();
 
-let selectedTracker = LocalPreferences.get("selected_tracker", TRACKERS_ALL);
+let selectedTracker = localPreferences.get("selected_tracker", TRACKERS_ALL);
 let setTrackerFilter = () => {};
 
 /* All filters */
-let selectedStatus = LocalPreferences.get("selected_filter", "all");
+let selectedStatus = localPreferences.get("selected_filter", "all");
 let setStatusFilter = () => {};
 let toggleFilterDisplay = () => {};
 
@@ -191,9 +268,9 @@ window.addEventListener("DOMContentLoaded", (event) => {
 
     const saveColumnSizes = () => {
         const filters_width = document.getElementById("Filters").getSize().x;
-        LocalPreferences.set("filters_width", filters_width);
+        localPreferences.set("filters_width", filters_width);
         const properties_height_rel = document.getElementById("propertiesPanel").getSize().y / Window.getSize().y;
-        LocalPreferences.set("properties_height_rel", properties_height_rel);
+        localPreferences.set("properties_height_rel", properties_height_rel);
     };
 
     window.addEventListener("resize", window.qBittorrent.Misc.createDebounceHandler(500, (e) => {
@@ -214,7 +291,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
             onResize: window.qBittorrent.Misc.createDebounceHandler(500, (e) => {
                 saveColumnSizes();
             }),
-            width: Number(LocalPreferences.get("filters_width", 210)),
+            width: Number(localPreferences.get("filters_width", 210)),
             resizeLimit: [1, 1000]
         });
         new MochaUI.Column({
@@ -276,7 +353,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
     setStatusFilter = (name) => {
         const currentHash = torrentsTable.getCurrentTorrentID();
 
-        LocalPreferences.set("selected_filter", name);
+        localPreferences.set("selected_filter", name);
         selectedStatus = name;
         highlightSelectedStatus();
         updateMainData();
@@ -288,7 +365,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
     setCategoryFilter = (category) => {
         const currentHash = torrentsTable.getCurrentTorrentID();
 
-        LocalPreferences.set("selected_category", category);
+        localPreferences.set("selected_category", category);
         selectedCategory = category;
         highlightSelectedCategory();
         updateMainData();
@@ -300,7 +377,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
     setTagFilter = (tag) => {
         const currentHash = torrentsTable.getCurrentTorrentID();
 
-        LocalPreferences.set("selected_tag", tag);
+        localPreferences.set("selected_tag", tag);
         selectedTag = tag;
         highlightSelectedTag();
         updateMainData();
@@ -312,7 +389,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
     setTrackerFilter = (tracker) => {
         const currentHash = torrentsTable.getCurrentTorrentID();
 
-        LocalPreferences.set("selected_tracker", tracker);
+        localPreferences.set("selected_tracker", tracker);
         selectedTracker = tracker;
         highlightSelectedTracker();
         updateMainData();
@@ -326,7 +403,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
         const filterTitle = filterList.previousElementSibling;
         const toggleIcon = filterTitle.firstElementChild;
         toggleIcon.classList.toggle("rotate");
-        LocalPreferences.set(`filter_${filterListID.replace("FilterList", "")}_collapsed`, filterList.classList.toggle("invisible").toString());
+        localPreferences.set(`filter_${filterListID.replace("FilterList", "")}_collapsed`, filterList.classList.toggle("invisible").toString());
     };
 
     new MochaUI.Panel({
@@ -350,35 +427,35 @@ window.addEventListener("DOMContentLoaded", (event) => {
     initializeWindows();
 
     // Show Top Toolbar is enabled by default
-    let showTopToolbar = LocalPreferences.get("show_top_toolbar", "true") === "true";
+    let showTopToolbar = localPreferences.get("show_top_toolbar", "true") === "true";
     if (!showTopToolbar) {
         document.getElementById("showTopToolbarLink").firstElementChild.style.opacity = "0";
         document.getElementById("mochaToolbar").classList.add("invisible");
     }
 
     // Show Status Bar is enabled by default
-    let showStatusBar = LocalPreferences.get("show_status_bar", "true") === "true";
+    let showStatusBar = localPreferences.get("show_status_bar", "true") === "true";
     if (!showStatusBar) {
         document.getElementById("showStatusBarLink").firstElementChild.style.opacity = "0";
         document.getElementById("desktopFooterWrapper").classList.add("invisible");
     }
 
     // Show Filters Sidebar is enabled by default
-    let showFiltersSidebar = LocalPreferences.get("show_filters_sidebar", "true") === "true";
+    let showFiltersSidebar = localPreferences.get("show_filters_sidebar", "true") === "true";
     if (!showFiltersSidebar) {
         document.getElementById("showFiltersSidebarLink").firstElementChild.style.opacity = "0";
         document.getElementById("filtersColumn").classList.add("invisible");
         document.getElementById("filtersColumn_handle").classList.add("invisible");
     }
 
-    let speedInTitle = LocalPreferences.get("speed_in_browser_title_bar") === "true";
+    let speedInTitle = localPreferences.get("speed_in_browser_title_bar") === "true";
     if (!speedInTitle)
         document.getElementById("speedInBrowserTitleBarLink").firstElementChild.style.opacity = "0";
 
     // After showing/hiding the toolbar + status bar
-    window.qBittorrent.Client.showSearchEngine(LocalPreferences.get("show_search_engine") !== "false");
-    window.qBittorrent.Client.showRssReader(LocalPreferences.get("show_rss_reader") !== "false");
-    window.qBittorrent.Client.showLogViewer(LocalPreferences.get("show_log_viewer") === "true");
+    window.qBittorrent.Client.showSearchEngine(localPreferences.get("show_search_engine") !== "false");
+    window.qBittorrent.Client.showRssReader(localPreferences.get("show_rss_reader") !== "false");
+    window.qBittorrent.Client.showLogViewer(localPreferences.get("show_log_viewer") === "true");
 
     // After Show Top Toolbar
     MochaUI.Desktop.setDesktopSize();
@@ -507,7 +584,8 @@ window.addEventListener("DOMContentLoaded", (event) => {
         if (!categoryList)
             return;
 
-        [...categoryList.children].forEach((el) => { el.remove(); });
+        for (const el of [...categoryList.children])
+            el.remove();
 
         const categoryItemTemplate = document.getElementById("categoryFilterItem");
 
@@ -540,8 +618,8 @@ window.addEventListener("DOMContentLoaded", (event) => {
                         stack.push({ parent: unorderedList, category: subcategory });
                 }
                 const categoryLocalPref = `category_${category.categoryName}_collapsed`;
-                const isCollapsed = !category.forceExpand && (LocalPreferences.get(categoryLocalPref, "false") === "true");
-                LocalPreferences.set(categoryLocalPref, listItem.classList.toggle("collapsedCategory", isCollapsed).toString());
+                const isCollapsed = !category.forceExpand && (localPreferences.get(categoryLocalPref, "false") === "true");
+                localPreferences.set(categoryLocalPref, listItem.classList.toggle("collapsedCategory", isCollapsed).toString());
             }
         };
 
@@ -560,7 +638,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
                 ...(useSubcategories && {
                     children: [],
                     isRoot: true,
-                    forceExpand: LocalPreferences.get(`category_${category}_collapsed`) === null
+                    forceExpand: localPreferences.get(`category_${category}_collapsed`) === null
                 })
             });
         }
@@ -628,7 +706,8 @@ window.addEventListener("DOMContentLoaded", (event) => {
         if (tagFilterList === null)
             return;
 
-        [...tagFilterList.children].forEach((el) => { el.remove(); });
+        for (const el of [...tagFilterList.children])
+            el.remove();
 
         const tagItemTemplate = document.getElementById("tagFilterItem");
 
@@ -681,7 +760,8 @@ window.addEventListener("DOMContentLoaded", (event) => {
         if (trackerFilterList === null)
             return;
 
-        [...trackerFilterList.children].forEach((el) => { el.remove(); });
+        for (const el of [...trackerFilterList.children])
+            el.remove();
 
         const trackerItemTemplate = document.getElementById("trackerFilterItem");
 
@@ -894,7 +974,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
                                         trackerMap.delete(host);
                                         if (selectedTracker === host) {
                                             selectedTracker = TRACKERS_ALL;
-                                            LocalPreferences.set("selected_tracker", selectedTracker);
+                                            localPreferences.set("selected_tracker", selectedTracker);
                                         }
                                     }
                                 }
@@ -1149,7 +1229,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
 
     document.getElementById("showTopToolbarLink").addEventListener("click", (e) => {
         showTopToolbar = !showTopToolbar;
-        LocalPreferences.set("show_top_toolbar", showTopToolbar.toString());
+        localPreferences.set("show_top_toolbar", showTopToolbar.toString());
         if (showTopToolbar) {
             document.getElementById("showTopToolbarLink").firstElementChild.style.opacity = "1";
             document.getElementById("mochaToolbar").classList.remove("invisible");
@@ -1163,7 +1243,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
 
     document.getElementById("showStatusBarLink").addEventListener("click", (e) => {
         showStatusBar = !showStatusBar;
-        LocalPreferences.set("show_status_bar", showStatusBar.toString());
+        localPreferences.set("show_status_bar", showStatusBar.toString());
         if (showStatusBar) {
             document.getElementById("showStatusBarLink").firstElementChild.style.opacity = "1";
             document.getElementById("desktopFooterWrapper").classList.remove("invisible");
@@ -1200,7 +1280,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
 
     document.getElementById("showFiltersSidebarLink").addEventListener("click", (e) => {
         showFiltersSidebar = !showFiltersSidebar;
-        LocalPreferences.set("show_filters_sidebar", showFiltersSidebar.toString());
+        localPreferences.set("show_filters_sidebar", showFiltersSidebar.toString());
         if (showFiltersSidebar) {
             document.getElementById("showFiltersSidebarLink").firstElementChild.style.opacity = "1";
             document.getElementById("filtersColumn").classList.remove("invisible");
@@ -1216,7 +1296,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
 
     document.getElementById("speedInBrowserTitleBarLink").addEventListener("click", (e) => {
         speedInTitle = !speedInTitle;
-        LocalPreferences.set("speed_in_browser_title_bar", speedInTitle.toString());
+        localPreferences.set("speed_in_browser_title_bar", speedInTitle.toString());
         if (speedInTitle)
             document.getElementById("speedInBrowserTitleBarLink").firstElementChild.style.opacity = "1";
         else
@@ -1226,19 +1306,19 @@ window.addEventListener("DOMContentLoaded", (event) => {
 
     document.getElementById("showSearchEngineLink").addEventListener("click", (e) => {
         window.qBittorrent.Client.showSearchEngine(!window.qBittorrent.Client.isShowSearchEngine());
-        LocalPreferences.set("show_search_engine", window.qBittorrent.Client.isShowSearchEngine().toString());
+        localPreferences.set("show_search_engine", window.qBittorrent.Client.isShowSearchEngine().toString());
         updateTabDisplay();
     });
 
     document.getElementById("showRssReaderLink").addEventListener("click", (e) => {
         window.qBittorrent.Client.showRssReader(!window.qBittorrent.Client.isShowRssReader());
-        LocalPreferences.set("show_rss_reader", window.qBittorrent.Client.isShowRssReader().toString());
+        localPreferences.set("show_rss_reader", window.qBittorrent.Client.isShowRssReader().toString());
         updateTabDisplay();
     });
 
     document.getElementById("showLogViewerLink").addEventListener("click", (e) => {
         window.qBittorrent.Client.showLogViewer(!window.qBittorrent.Client.isShowLogViewer());
-        LocalPreferences.set("show_log_viewer", window.qBittorrent.Client.isShowLogViewer().toString());
+        localPreferences.set("show_log_viewer", window.qBittorrent.Client.isShowLogViewer().toString());
         updateTabDisplay();
     });
 
@@ -1295,7 +1375,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
     // main window tabs
 
     const showTransfersTab = () => {
-        const showFiltersSidebar = LocalPreferences.get("show_filters_sidebar", "true") === "true";
+        const showFiltersSidebar = localPreferences.get("show_filters_sidebar", "true") === "true";
         if (showFiltersSidebar) {
             document.getElementById("filtersColumn").classList.remove("invisible");
             document.getElementById("filtersColumn_handle").classList.remove("invisible");
@@ -1310,7 +1390,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
         hideRssTab();
         hideLogTab();
 
-        LocalPreferences.set("selected_window_tab", "transfers");
+        localPreferences.set("selected_window_tab", "transfers");
     };
 
     const hideTransfersTab = () => {
@@ -1346,7 +1426,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
             hideRssTab();
             hideLogTab();
 
-            LocalPreferences.set("selected_window_tab", "search");
+            localPreferences.set("selected_window_tab", "search");
         };
     })();
 
@@ -1383,7 +1463,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
             hideSearchTab();
             hideLogTab();
 
-            LocalPreferences.set("selected_window_tab", "rss");
+            localPreferences.set("selected_window_tab", "rss");
         };
     })();
 
@@ -1421,7 +1501,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
             hideSearchTab();
             hideRssTab();
 
-            LocalPreferences.set("selected_window_tab", "log");
+            localPreferences.set("selected_window_tab", "log");
         };
     })();
 
@@ -1547,17 +1627,17 @@ window.addEventListener("DOMContentLoaded", (event) => {
         },
         column: "mainColumn",
         onResize: window.qBittorrent.Misc.createDebounceHandler(500, (e) => {
-            const isHidden = (parseInt(document.getElementById("propertiesPanel").style.height, 10) === 0);
+            const isHidden = (Number.parseInt(document.getElementById("propertiesPanel").style.height, 10) === 0);
             if (!isHidden)
                 saveColumnSizes();
         }),
         height: null
     });
-    let prop_h = LocalPreferences.get("properties_height_rel");
+    let prop_h = localPreferences.get("properties_height_rel");
     if (prop_h !== null)
         prop_h = Number(prop_h) * Window.getSize().y;
     else
-        prop_h = Window.getSize().y / 2.0;
+        prop_h = Window.getSize().y / 2;
     new MochaUI.Panel({
         id: "propertiesPanel",
         title: "Panel",
@@ -1578,7 +1658,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
             ],
             onload: () => {
                 updatePropertiesPanel = () => {
-                    switch (LocalPreferences.get("selected_properties_tab")) {
+                    switch (localPreferences.get("selected_properties_tab")) {
                         case "propGeneralLink":
                             window.qBittorrent.PropGeneral.updateData();
                             break;
@@ -1605,7 +1685,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
 
             const togglePropertiesPanel = () => {
                 this.collapseToggleEl.click();
-                LocalPreferences.set("properties_panel_collapsed", this.isCollapsed.toString());
+                localPreferences.set("properties_panel_collapsed", this.isCollapsed.toString());
             };
 
             const selectTab = (tabID) => {
@@ -1618,17 +1698,17 @@ window.addEventListener("DOMContentLoaded", (event) => {
                     for (const tabContent of this.contentEl.children)
                         tabContent.classList.toggle("invisible", tabContent.id !== tabContentID);
 
-                    LocalPreferences.set("selected_properties_tab", tabID);
+                    localPreferences.set("selected_properties_tab", tabID);
                 }
 
                 if (isAlreadySelected || this.isCollapsed)
                     togglePropertiesPanel();
             };
 
-            const lastUsedTab = LocalPreferences.get("selected_properties_tab", "propGeneralLink");
+            const lastUsedTab = localPreferences.get("selected_properties_tab", "propGeneralLink");
             selectTab(lastUsedTab);
 
-            const startCollapsed = LocalPreferences.get("properties_panel_collapsed", "false") === "true";
+            const startCollapsed = localPreferences.get("properties_panel_collapsed", "false") === "true";
             if (startCollapsed)
                 togglePropertiesPanel();
 
@@ -1693,32 +1773,11 @@ window.addEventListener("DOMContentLoaded", (event) => {
                 // can't handle folder due to cannot put the filelist (from dropped folder)
                 // to <input> `files` field
                 for (const item of ev.dataTransfer.items) {
-                    if (item.webkitGetAsEntry().isDirectory)
+                    if ((item.kind !== "file") || (item.webkitGetAsEntry().isDirectory))
                         return;
                 }
 
-                const id = "uploadPage";
-                new MochaUI.Window({
-                    id: id,
-                    icon: "images/qbittorrent-tray.svg",
-                    title: "QBT_TR(Upload local torrent)QBT_TR[CONTEXT=HttpServer]",
-                    loadMethod: "iframe",
-                    contentURL: "upload.html?v=${CACHEID}",
-                    addClass: "windowFrame", // fixes iframe scrolling on iOS Safari
-                    scrollbars: true,
-                    maximizable: false,
-                    paddingVertical: 0,
-                    paddingHorizontal: 0,
-                    width: loadWindowWidth(id, 500),
-                    height: loadWindowHeight(id, 460),
-                    onResize: window.qBittorrent.Misc.createDebounceHandler(500, (e) => {
-                        saveWindowSize(id);
-                    }),
-                    onContentLoaded: () => {
-                        const fileInput = document.getElementById(`${id}_iframe`).contentDocument.getElementById("fileselect");
-                        fileInput.files = droppedFiles;
-                    }
-                });
+                window.qBittorrent.Client.uploadTorrentFiles(droppedFiles);
             }
 
             const droppedText = ev.dataTransfer.getData("text");
@@ -1736,33 +1795,8 @@ window.addEventListener("DOMContentLoaded", (event) => {
                             || ((str.length === 32) && !(/[^2-7A-Z]/i.test(str))); // v1 Base32 encoded SHA-1 info-hash
                     });
 
-                if (urls.length <= 0)
-                    return;
-
-                const id = "downloadPage";
-                const contentURL = new URL("download.html", window.location);
-                contentURL.search = new URLSearchParams({
-                    v: "${CACHEID}",
-                    urls: urls.map(encodeURIComponent).join("|")
-                });
-                new MochaUI.Window({
-                    id: id,
-                    icon: "images/qbittorrent-tray.svg",
-                    title: "QBT_TR(Download from URLs)QBT_TR[CONTEXT=downloadFromURL]",
-                    loadMethod: "iframe",
-                    contentURL: contentURL.toString(),
-                    addClass: "windowFrame", // fixes iframe scrolling on iOS Safari
-                    scrollbars: true,
-                    maximizable: false,
-                    closable: true,
-                    paddingVertical: 0,
-                    paddingHorizontal: 0,
-                    width: loadWindowWidth(id, 500),
-                    height: loadWindowHeight(id, 600),
-                    onResize: window.qBittorrent.Misc.createDebounceHandler(500, (e) => {
-                        saveWindowSize(id);
-                    })
-                });
+                for (const url of urls)
+                    qBittorrent.Client.createAddTorrentWindow(url, url);
             }
         });
     };
@@ -1858,6 +1892,9 @@ window.addEventListener("DOMContentLoaded", (event) => {
             case "copyComment":
                 setupClickEvent(copyCommentFN);
                 break;
+            case "copyContentPath":
+                setupClickEvent(copyContentPathFN);
+                break;
         }
     }
 
@@ -1865,7 +1902,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
         if (document.hidden)
             return;
 
-        switch (LocalPreferences.get("selected_window_tab")) {
+        switch (localPreferences.get("selected_window_tab")) {
             case "log":
                 window.qBittorrent.Log.load();
                 break;
@@ -1881,7 +1918,7 @@ window.addEventListener("load", async (event) => {
     await window.qBittorrent.Client.initializeCaches();
 
     // switch to previously used tab
-    const previouslyUsedTab = LocalPreferences.get("selected_window_tab", "transfers");
+    const previouslyUsedTab = localPreferences.get("selected_window_tab", "transfers");
     switch (previouslyUsedTab) {
         case "search":
             if (window.qBittorrent.Client.isShowSearchEngine())

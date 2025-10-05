@@ -29,12 +29,10 @@
 #pragma once
 
 #include <QtTypes>
-#include <base/bittorrent/announcetimepoint.h>
 
 class QDateTime;
 
 namespace Utils::DateTime
 {
     qint64 toSecsSinceEpoch(const QDateTime &dateTime);
-    qint64 toSecsSinceEpoch(const BitTorrent::AnnounceTimePoint &dateTime);
 }

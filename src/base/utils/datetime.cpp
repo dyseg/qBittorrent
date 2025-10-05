@@ -34,8 +34,3 @@ qint64 Utils::DateTime::toSecsSinceEpoch(const QDateTime &dateTime)
 {
     return dateTime.isValid() ? dateTime.toSecsSinceEpoch() : -1;
 }
-
-qint64 Utils::DateTime::toSecsSinceEpoch(const BitTorrent::AnnounceTimePoint &dateTime)
-{
-    return std::chrono::duration_cast<std::chrono::seconds>(dateTime.time_since_epoch()).count();
-}

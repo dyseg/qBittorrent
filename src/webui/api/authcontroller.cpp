@@ -59,6 +59,7 @@ void AuthController::loginAction()
 {
     if (m_sessionManager->session())
     {
+        setResult(u"Ok."_s);
         setStatus(APIStatus::Ok);
         return;
     }

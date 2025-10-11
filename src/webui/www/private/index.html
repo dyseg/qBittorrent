@@ -155,7 +155,12 @@
                     <div class="clear"></div>
                 </div>
                 <div id="torrentsFilterToolbar">
-                    <input type="search" id="torrentsFilterInput" placeholder="QBT_TR(Filter torrent list...)QBT_TR[CONTEXT=MainWindow]" aria-label="QBT_TR(Filter torrent list...)QBT_TR[CONTEXT=MainWindow]" autocorrect="off" autocapitalize="none">
+                    <div style="position: relative; display: inline-block;">
+                        <input type="search" id="torrentsFilterInput" placeholder="QBT_TR(Filter torrent list...)QBT_TR[CONTEXT=MainWindow]" aria-label="QBT_TR(Filter torrent list...)QBT_TR[CONTEXT=MainWindow]" autocorrect="off" autocapitalize="none" style="padding-right: 2em;">
+                        <button id="torrentsFilterClearBtn" type="button" title="Clear" style="position: absolute; right: 0.3em; top: 50%; transform: translateY(-50%); display: none; background: transparent; border: none; cursor: pointer; padding: 0;">
+                            &#10006;
+                        </button>
+                    </div>
                     <input type="checkbox" id="torrentsFilterRegexBox">
                     <label for="torrentsFilterRegexBox" aria-label="QBT_TR(Use regular expression)QBT_TR[CONTEXT=MainWindow]" title="QBT_TR(Use regular expression)QBT_TR[CONTEXT=MainWindow]"></label>
                     <label for="torrentsFilterSelect">QBT_TR(Filter by:)QBT_TR[CONTEXT=MainWindow]</label>

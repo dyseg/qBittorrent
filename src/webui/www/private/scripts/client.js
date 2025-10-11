@@ -1734,12 +1734,25 @@ window.addEventListener("DOMContentLoaded", (event) => {
 
     // listen for changes to torrentsFilterInput
     let torrentsFilterInputTimer = -1;
-    document.getElementById("torrentsFilterInput").addEventListener("input", (event) => {
+    const torrentsFilterInput = document.getElementById("torrentsFilterInput");
+    const torrentsFilterInputClrBtn = document.getElementById("torrentsFilterClearBtn");
+    torrentsFilterInput.addEventListener("input", (event) => {
         clearTimeout(torrentsFilterInputTimer);
         torrentsFilterInputTimer = setTimeout(() => {
             torrentsFilterInputTimer = -1;
             torrentsTable.updateTable();
         }, window.qBittorrent.Misc.FILTER_INPUT_DELAY);
+        if (torrentsFilterInput.value)
+            torrentsFilterInputClrBtn.style.display = "block";
+        else
+            torrentsFilterInputClrBtn.style.display = "none";
+    });
+
+    torrentsFilterInputClrBtn.addEventListener("click", () => {
+        torrentsFilterInput.value = "";
+        torrentsFilterInputClrBtn.style.display = "none";
+        torrentsTable.updateTable();
+        torrentsFilterInput.focus();
     });
 
     document.getElementById("torrentsFilterToolbar").addEventListener("change", (e) => { torrentsTable.updateTable(); });

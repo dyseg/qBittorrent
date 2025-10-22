@@ -43,7 +43,6 @@
 #include <QNetworkCookie>
 #include <QRegularExpression>
 #include <QThread>
-#include <QTimer>
 #include <QUrl>
 
 #include "base/algorithm.h"
@@ -671,7 +670,7 @@ void WebApplication::sessionInitialize()
             }
             else
             {
-                m_currentSession->updateTimestamp(m_sessionTimeout);
+                m_currentSession->updateTimestamp();
             }
         }
         else
@@ -718,13 +717,20 @@ void WebApplication::sessionStart()
 {
     Q_ASSERT(!m_currentSession);
 
-    m_currentSession = new WebSession(generateSid(), m_sessionTimeout, app());
-    connect(m_currentSession, &WebSession::expired, this, &WebApplication::sessionExpired);
+    // remove outdated sessions
+    Algorithm::removeIf(m_sessions, [this](const QString &, const WebSession *session)
+    {
+        if (session->hasExpired(m_sessionTimeout))
+        {
+            delete session;
+            return true;
+        }
+
+        return false;
+    });
+
+    m_currentSession = new WebSession(generateSid(), app());
     m_sessions[m_currentSession->id()] = m_currentSession;
-    LogMsg(u"New session: \"%3\" \"%1\". All sessions: %2"_s.arg(
-        m_currentSession->id(),
-        QString::number(m_sessions.count()),
-        request().headers.value(u"user-agent"_s)));
 
     m_currentSession->registerAPIController(u"app"_s, new AppController(app(), m_currentSession));
     m_currentSession->registerAPIController(u"clientdata"_s, new ClientDataController(m_clientDataStorage, app(), m_currentSession));
@@ -781,15 +787,6 @@ bool WebApplication::isOriginTrustworthy() const
         return true;
 
     return false;
-}
-
-void WebApplication::sessionExpired(const QString sessionId)
-{
-    delete m_sessions.take(sessionId);
-
-    LogMsg(u"Session \"%1\" expired. All sessions: %2"_s.arg(
-        sessionId,
-        QString::number(m_sessions.count())));
 }
 
 bool WebApplication::isCrossSiteRequest(const Http::Request &request) const
@@ -915,17 +912,11 @@ QHostAddress WebApplication::resolveClientAddress() const
 
 // WebSession
 
-WebSession::WebSession(const QString &sid, const qint64 expiration, IApplication *app)
+WebSession::WebSession(const QString &sid, IApplication *app)
     : ApplicationComponent(app)
     , m_sid {sid}
-    , m_timer {new QTimer(this)}
 {
-    connect(m_timer, &QTimer::timeout, this, [this]
-    {
-        emit expired(m_sid);
-    });
-    m_timer->setSingleShot(true);
-    updateTimestamp(expiration);
+    updateTimestamp();
 }
 
 QString WebSession::id() const
@@ -937,15 +928,12 @@ bool WebSession::hasExpired(const qint64 seconds) const
 {
     if (seconds <= 0)
         return false;
-    auto limit = seconds * 1000;
-    auto elapsed = m_timer->interval() - m_timer->remainingTime();
-
-    return elapsed > limit;
+    return m_timer.hasExpired(seconds * 1000);
 }
 
-void WebSession::updateTimestamp(const qint64 seconds)
+void WebSession::updateTimestamp()
 {
-    m_timer->start(seconds * 1000);
+    m_timer.start();
 }
 
 void WebSession::registerAPIController(const QString &scope, APIController *controller)

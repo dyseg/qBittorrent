@@ -95,7 +95,6 @@ private:
     QHash<BitTorrent::TorrentID, QSet<QString>> m_errors;  // <torrent ID, tracker hosts>
     QHash<BitTorrent::TorrentID, QSet<QString>> m_trackerErrors;  // <torrent ID, tracker hosts>
     QHash<BitTorrent::TorrentID, QSet<QString>> m_warnings;  // <torrent ID, tracker hosts>
-    QHash<BitTorrent::TorrentID, QSet<QString>> m_unregistered;  // <torrent ID, tracker hosts>
     PathList m_iconPaths;
     int m_totalTorrents = 0;
     bool m_downloadTrackerFavicon = false;

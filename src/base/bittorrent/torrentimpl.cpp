@@ -122,7 +122,6 @@ namespace
         int numNotWorking = 0;
         int numTrackerError = 0;
         int numUnreachable = 0;
-        int numUnregistered = 0;
 
         for (const lt::announce_endpoint &ltAnnounceEndpoint : nativeEntry.endpoints)
         {
@@ -170,11 +169,6 @@ namespace
                         {
                             trackerEndpointStatus.state = TrackerEndpointState::Unreachable;
                             ++numUnreachable;
-                        }
-                        else if (ltAnnounceInfo.message.find("Not Found") != std::string::npos || ltAnnounceInfo.message.find("unregistered") != std::string::npos)
-                        {
-                            trackerEndpointStatus.state = TrackerEndpointState::Unregistered;
-                            ++numUnregistered;
                         }
                         else
                         {
@@ -234,10 +228,6 @@ namespace
                 if (numWorking > 0)
                 {
                     trackerEntryStatus.state = TrackerEndpointState::Working;
-                }
-                else if (numUnregistered > 0)
-                {
-                    trackerEntryStatus.state = TrackerEndpointState::Unregistered;
                 }
                 else if (numTrackerError > 0)
                 {

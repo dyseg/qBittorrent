@@ -1,6 +1,6 @@
 /*
  * Bittorrent Client using Qt and libtorrent.
- * Copyright (C) 2006  Christophe Dumez <chris@qbittorrent.org>
+ * Copyright (C) 2025  Thomas Piccirello <thomas@piccirello.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,25 +26,25 @@
  * exception statement from your version.
  */
 
-#pragma once
+#include "apikey.h"
 
-#include <QTabWidget>
+#include <QString>
 
-#ifdef Q_OS_MACOS
-class QPaintEvent;
-#endif
+#include "base/global.h"
+#include "base/utils/password.h"
 
-class HidableTabWidget final : public QTabWidget
+namespace
 {
-public:
-    explicit HidableTabWidget(QWidget *parent = nullptr);
+    const int keyLength = 28;
+    const QString prefix = u"qbt_"_s;
+}
 
-private:
-    void tabInserted(int index) override;
-    void tabRemoved(int index) override;
-    void tabsCountChanged();
+QString Utils::APIKey::generate()
+{
+    return prefix + Utils::Password::generate(keyLength);
+}
 
-#ifdef Q_OS_MACOS
-    void paintEvent(QPaintEvent *event) override;
-#endif
-};
+bool Utils::APIKey::isValid(const QString &key)
+{
+    return key.startsWith(prefix) && (key.length() == (prefix.length() + keyLength));
+}

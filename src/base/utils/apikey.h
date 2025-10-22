@@ -1,6 +1,6 @@
 /*
  * Bittorrent Client using Qt and libtorrent.
- * Copyright (C) 2006  Christophe Dumez <chris@qbittorrent.org>
+ * Copyright (C) 2025  Thomas Piccirello <thomas@piccirello.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -28,23 +28,10 @@
 
 #pragma once
 
-#include <QTabWidget>
+class QString;
 
-#ifdef Q_OS_MACOS
-class QPaintEvent;
-#endif
-
-class HidableTabWidget final : public QTabWidget
+namespace Utils::APIKey
 {
-public:
-    explicit HidableTabWidget(QWidget *parent = nullptr);
-
-private:
-    void tabInserted(int index) override;
-    void tabRemoved(int index) override;
-    void tabsCountChanged();
-
-#ifdef Q_OS_MACOS
-    void paintEvent(QPaintEvent *event) override;
-#endif
-};
+    QString generate();
+    bool isValid(const QString &key);
+}

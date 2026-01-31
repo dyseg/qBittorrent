@@ -359,7 +359,7 @@ window.qBittorrent.PropTrackers ??= (() => {
         await clipboardCopy(text);
     });
 
-    torrentTrackersTable.setup("torrentTrackersTableDiv", "torrentTrackersTableFixedHeaderDiv", torrentTrackersContextMenu, true);
+    torrentTrackersTable.setup("torrentTrackersTableDiv", "torrentTrackersTableFixedHeaderDiv", torrentTrackersContextMenu);
 
     return exports();
 })();

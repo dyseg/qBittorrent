@@ -31,7 +31,9 @@
 #include <QString>
 
 #include "base/global.h"
-#include "types.h"
+#include "constants.h"
+#include "header.h"
+#include "response.h"
 
 namespace Http
 {

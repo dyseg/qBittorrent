@@ -262,7 +262,11 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
 #endif
         tr("Transfers"));
     // Filter types
-    const QList<TransferListModel::Column> filterTypes = {TransferListModel::Column::TR_NAME, TransferListModel::Column::TR_SAVE_PATH};
+    const QList<TransferListModel::Column> filterTypes = {
+        TransferListModel::Column::TR_NAME
+        , TransferListModel::Column::TR_SAVE_PATH
+        , TransferListModel::Column::TR_INFOHASH_V1
+        , TransferListModel::Column::TR_INFOHASH_V2};
     for (const TransferListModel::Column type : filterTypes)
     {
         const QString typeName = m_transferListWidget->getSourceModel()->headerData(type, Qt::Horizontal, Qt::DisplayRole).value<QString>();
@@ -1463,6 +1467,12 @@ void MainWindow::loadPreferences()
     }
 #endif
 
+#ifdef Q_OS_MACOS
+    // Clear dock badge immediately if speed display is disabled
+    if (!pref->isSpeedInDockEnabled())
+        m_badger->updateSpeed(0, 0);
+#endif
+
     qDebug("GUI settings loaded");
 }
 
@@ -1475,7 +1485,8 @@ void MainWindow::loadSessionStats()
 
     // update global information
 #ifdef Q_OS_MACOS
-    m_badger->updateSpeed(status.payloadDownloadRate, status.payloadUploadRate);
+    if (Preferences::instance()->isSpeedInDockEnabled())
+        m_badger->updateSpeed(status.payloadDownloadRate, status.payloadUploadRate);
     m_statusItem->updateSpeed(status.payloadDownloadRate, status.payloadUploadRate);
 #else
     refreshTrayIconTooltip();

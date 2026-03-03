@@ -59,13 +59,18 @@ add_library(qbt_base STATIC
     freediskspacechecker.h
     global.h
     http/connection.h
+    http/constants.h
+    http/environment.h
+    http/header.h
+    http/headermap.h
     http/httperror.h
     http/irequesthandler.h
+    http/request.h
+    http/response.h
     http/requestparser.h
     http/responsebuilder.h
     http/responsegenerator.h
     http/server.h
-    http/types.h
     indexrange.h
     interfaces/iapplication.h
     logger.h
@@ -247,6 +252,13 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         ${Carbon_LIBRARY}
         ${IOKit_LIBRARY}
     )
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    include(CheckSymbolExists)
+    check_symbol_exists(getrandom "sys/random.h" HAVE_GETRANDOM)
+
+    if (HAVE_GETRANDOM)
+        target_compile_definitions(qbt_base PUBLIC QBT_USES_GETRANDOM)
+    endif()
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_link_libraries(qbt_base PRIVATE iphlpapi powrprof)
 endif()

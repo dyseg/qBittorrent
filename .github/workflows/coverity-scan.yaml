@@ -38,7 +38,8 @@ jobs:
           sudo apt update
           sudo apt install \
             build-essential cmake ninja-build \
-            libssl-dev libxkbcommon-x11-dev libxcb-cursor-dev zlib1g-dev
+            libssl-dev libxkbcommon-x11-dev libxcb-cursor-dev zlib1g-dev \
+            -y
 
       - name: Install boost
         run: |

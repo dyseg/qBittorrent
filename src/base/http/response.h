@@ -34,25 +34,18 @@
 
 #include "headermap.h"
 
-using namespace Qt::Literals::StringLiterals;
-
 namespace Http
 {
     struct ResponseStatus
     {
-        uint code;
-        QString text;
+        int code = 0;
+        QString text {};
     };
 
     struct Response
     {
-        ResponseStatus status;
-        HeaderMap headers;
-        QByteArray content;
-
-        Response(uint code = 200, const QString &text = u"OK"_s)
-            : status {code, text}
-        {
-        }
+        ResponseStatus status {};
+        HeaderMap headers {};
+        QByteArray content {};
     };
 }

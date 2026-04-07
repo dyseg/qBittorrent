@@ -1,6 +1,6 @@
 /*
  * Bittorrent Client using Qt and libtorrent.
- * Copyright (C) 2021-2025  Vladimir Golovnev <glassez@yandex.ru>
+ * Copyright (C) 2021-2026  Vladimir Golovnev <glassez@yandex.ru>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -37,7 +37,11 @@
 #include <libtorrent/entry.hpp>
 #include <libtorrent/read_resume_data.hpp>
 #include <libtorrent/torrent_info.hpp>
+#include <libtorrent/version.hpp>
 #include <libtorrent/write_resume_data.hpp>
+#if LIBTORRENT_VERSION_NUM >= 20100
+#include <libtorrent/load_torrent.hpp>
+#endif
 
 #include <QByteArray>
 #include <QDebug>
@@ -52,16 +56,16 @@
 #include <QWaitCondition>
 
 #include "base/exceptions.h"
-#include "base/global.h"
 #include "base/logger.h"
 #include "base/path.h"
 #include "base/preferences.h"
 #include "base/profile.h"
-#include "base/utils/fs.h"
 #include "base/utils/sslkey.h"
 #include "base/utils/string.h"
 #include "infohash.h"
 #include "loadtorrentparams.h"
+
+using namespace Qt::Literals::StringLiterals;
 
 namespace
 {
@@ -633,11 +637,13 @@ LoadResumeDataResult DBResumeDataStorage::parseQueryResultRow(const QSqlQuery &q
     }
     resumeData.hasFinishedStatus = query.value(DB_COLUMN_HAS_SEED_STATUS.name).toBool();
     resumeData.firstLastPiecePriority = query.value(DB_COLUMN_HAS_OUTER_PIECES_PRIORITY.name).toBool();
-    resumeData.ratioLimit = query.value(DB_COLUMN_RATIO_LIMIT.name).toInt() / 1000.0;
-    resumeData.seedingTimeLimit = query.value(DB_COLUMN_SEEDING_TIME_LIMIT.name).toInt();
-    resumeData.inactiveSeedingTimeLimit = query.value(DB_COLUMN_INACTIVE_SEEDING_TIME_LIMIT.name).toInt();
-    resumeData.shareLimitAction = Utils::String::toEnum<ShareLimitAction>(
-        query.value(DB_COLUMN_SHARE_LIMIT_ACTION.name).toString(), ShareLimitAction::Default);
+    resumeData.shareLimits = {
+        .ratioLimit = query.value(DB_COLUMN_RATIO_LIMIT.name).toInt() / 1000.0,
+        .seedingTimeLimit = query.value(DB_COLUMN_SEEDING_TIME_LIMIT.name).toInt(),
+        .inactiveSeedingTimeLimit = query.value(DB_COLUMN_INACTIVE_SEEDING_TIME_LIMIT.name).toInt(),
+        .action = Utils::String::toEnum<ShareLimitAction>(
+            query.value(DB_COLUMN_SHARE_LIMIT_ACTION.name).toString(), ShareLimitAction::Default)
+    };
     resumeData.contentLayout = Utils::String::toEnum<TorrentContentLayout>(
         query.value(DB_COLUMN_CONTENT_LAYOUT.name).toString(), TorrentContentLayout::Original);
     resumeData.operatingMode = Utils::String::toEnum<TorrentOperatingMode>(
@@ -645,12 +651,11 @@ LoadResumeDataResult DBResumeDataStorage::parseQueryResultRow(const QSqlQuery &q
     resumeData.stopped = query.value(DB_COLUMN_STOPPED.name).toBool();
     resumeData.stopCondition = Utils::String::toEnum(
         query.value(DB_COLUMN_STOP_CONDITION.name).toString(), Torrent::StopCondition::None);
-    resumeData.sslParameters =
-        {
-            .certificate = QSslCertificate(query.value(DB_COLUMN_SSL_CERTIFICATE.name).toByteArray()),
-            .privateKey = Utils::SSLKey::load(query.value(DB_COLUMN_SSL_PRIVATE_KEY.name).toByteArray()),
-            .dhParams = query.value(DB_COLUMN_SSL_DH_PARAMS.name).toByteArray()
-        };
+    resumeData.sslParameters = {
+        .certificate = QSslCertificate(query.value(DB_COLUMN_SSL_CERTIFICATE.name).toByteArray()),
+        .privateKey = Utils::SSLKey::load(query.value(DB_COLUMN_SSL_PRIVATE_KEY.name).toByteArray()),
+        .dhParams = query.value(DB_COLUMN_SSL_DH_PARAMS.name).toByteArray()
+    };
 
     resumeData.savePath = Profile::instance()->fromPortablePath(
         Path(query.value(DB_COLUMN_TARGET_SAVE_PATH.name).toString()));
@@ -685,9 +690,24 @@ LoadResumeDataResult DBResumeDataStorage::parseQueryResultRow(const QSqlQuery &q
         if (ec)
             return nonstd::make_unexpected(tr("Cannot parse torrent info: %1").arg(QString::fromStdString(ec.message())));
 
+#if LIBTORRENT_VERSION_NUM >= 20100
+        const lt::load_torrent_limits limits {
+            .max_buffer_size = static_cast<int>(pref->getTorrentFileSizeLimit()),
+            .max_decode_depth = bdecodeDepthLimit,
+            .max_decode_tokens = bdecodeTokenLimit};
+        const lt::add_torrent_params atp = lt::load_torrent_parsed(torrentInfoRoot, ec, limits);
+        if (ec)
+            return nonstd::make_unexpected(tr("Cannot parse torrent info: %1").arg(QString::fromStdString(ec.message())));
+
+        p.ti = atp.ti;
+        p.creation_date = atp.creation_date;
+        p.created_by = atp.created_by;
+        p.comment = atp.comment;
+#else
         p.ti = std::make_shared<lt::torrent_info>(torrentInfoRoot, ec);
         if (ec)
             return nonstd::make_unexpected(tr("Cannot parse torrent info: %1").arg(QString::fromStdString(ec.message())));
+#endif
     }
 
     p.save_path = Profile::instance()->fromPortablePath(Path(fromLTString(p.save_path)))
@@ -908,10 +928,10 @@ StoreJob::StoreJob(const TorrentID &torrentID, LoadTorrentParams resumeData)
                     ? QString() : Utils::String::joinIntoString(m_resumeData.tags, u","_s)));
             query.bindValue(DB_COLUMN_COMMENT.placeholder, m_resumeData.comment);
             query.bindValue(DB_COLUMN_CONTENT_LAYOUT.placeholder, Utils::String::fromEnum(m_resumeData.contentLayout));
-            query.bindValue(DB_COLUMN_RATIO_LIMIT.placeholder, static_cast<int>(m_resumeData.ratioLimit * 1000));
-            query.bindValue(DB_COLUMN_SEEDING_TIME_LIMIT.placeholder, m_resumeData.seedingTimeLimit);
-            query.bindValue(DB_COLUMN_INACTIVE_SEEDING_TIME_LIMIT.placeholder, m_resumeData.inactiveSeedingTimeLimit);
-            query.bindValue(DB_COLUMN_SHARE_LIMIT_ACTION.placeholder, Utils::String::fromEnum(m_resumeData.shareLimitAction));
+            query.bindValue(DB_COLUMN_RATIO_LIMIT.placeholder, static_cast<int>(m_resumeData.shareLimits.ratioLimit * 1000));
+            query.bindValue(DB_COLUMN_SEEDING_TIME_LIMIT.placeholder, m_resumeData.shareLimits.seedingTimeLimit);
+            query.bindValue(DB_COLUMN_INACTIVE_SEEDING_TIME_LIMIT.placeholder, m_resumeData.shareLimits.inactiveSeedingTimeLimit);
+            query.bindValue(DB_COLUMN_SHARE_LIMIT_ACTION.placeholder, Utils::String::fromEnum(m_resumeData.shareLimits.action));
             query.bindValue(DB_COLUMN_HAS_OUTER_PIECES_PRIORITY.placeholder, m_resumeData.firstLastPiecePriority);
             query.bindValue(DB_COLUMN_HAS_SEED_STATUS.placeholder, m_resumeData.hasFinishedStatus);
             query.bindValue(DB_COLUMN_OPERATING_MODE.placeholder, Utils::String::fromEnum(m_resumeData.operatingMode));

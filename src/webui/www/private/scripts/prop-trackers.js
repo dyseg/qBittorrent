@@ -218,12 +218,14 @@ window.qBittorrent.PropTrackers ??= (() => {
                 return tracker.startsWith("** [") || tracker.startsWith("endpoint|");
             });
 
+            if (selectedTrackers.length === 0) {
+                this.hideItem("EditTrackerTier");
+            }
             if (containsStaticTracker || (selectedTrackers.length === 0)) {
                 this.hideItem("EditTracker");
                 this.hideItem("RemoveTracker");
                 this.hideItem("CopyTrackerUrl");
                 this.hideItem("ReannounceTrackers");
-                this.hideItem("EditTrackerTier");
             }
             else {
                 if (selectedTrackers.length === 1)

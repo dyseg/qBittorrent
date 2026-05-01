@@ -63,6 +63,7 @@ private slots:
     void trackersAction();
     void decreaseTrackerTierAction();
     void increaseTrackerTierAction();
+    void editTrackerTierAction();
     void webseedsAction();
     void addWebSeedsAction();
     void editWebSeedAction();

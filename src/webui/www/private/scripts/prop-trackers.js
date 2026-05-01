@@ -184,7 +184,7 @@ window.qBittorrent.PropTrackers ??= (() => {
         }).send();
         torrentTrackersTable.reselectRows(selectedTrackers);
     };
-
+    
     const torrentTrackersContextMenu = new window.qBittorrent.ContextMenu.ContextMenu({
         targets: "#torrentTrackersTableDiv",
         menu: "torrentTrackersMenu",
@@ -194,6 +194,9 @@ window.qBittorrent.PropTrackers ??= (() => {
             },
             EditTracker: (element, ref) => {
                 editTrackerFN(element);
+            },
+            EditTrackerTier: (element, ref) => {
+                editTrackerTierFN(element);
             },
             RemoveTracker: (element, ref) => {
                 removeTrackerFN(element);
@@ -220,6 +223,7 @@ window.qBittorrent.PropTrackers ??= (() => {
                 this.hideItem("RemoveTracker");
                 this.hideItem("CopyTrackerUrl");
                 this.hideItem("ReannounceTrackers");
+                this.hideItem("EditTrackerTier");
             }
             else {
                 if (selectedTrackers.length === 1)
@@ -228,6 +232,7 @@ window.qBittorrent.PropTrackers ??= (() => {
                     this.hideItem("EditTracker");
 
                 this.showItem("RemoveTracker");
+                this.showItem("EditTrackerTier");
                 this.showItem("CopyTrackerUrl");
 
                 const torrentHash = torrentsTable.getCurrentTorrentID();
@@ -298,6 +303,36 @@ window.qBittorrent.PropTrackers ??= (() => {
             paddingHorizontal: 0,
             width: window.qBittorrent.Dialog.limitWidthToViewport(500),
             height: 200,
+            onCloseComplete: () => {
+                updateData();
+            }
+        });
+    };
+
+    const editTrackerTierFN = (element) => {
+        if (current_hash.length === 0)
+            return;
+        
+        const selectedTrackers = torrentTrackersTable.selectedRowsIds();
+        if (selectedTrackers.length === 0)
+            return;
+        let tracker_urls = selectedTrackers.map(encodeURIComponent).join("|");
+        let tier = torrentTrackersTable.getRow(selectedTrackers[0]).full_data.tier;
+
+        new MochaUI.Window({
+            id: "editTrackerTierPage",
+            icon: "images/qbittorrent-tray.svg",
+            title: "QBT_TR(Edit tracker(s) tier)QBT_TR[CONTEXT=TrackersAdditionDialog]",
+            loadMethod: "iframe",
+            contentURL: `edittrackertier.html?v=${CACHEID}&hash=${current_hash}&tracker_urls=${tracker_urls}&tier=${tier}`,
+            scrollbars: false,
+            resizable: false,
+            maximizable: false,
+            closable: true,
+            paddingVertical: 0,
+            paddingHorizontal: 0,
+            width: window.qBittorrent.Dialog.limitWidthToViewport(300),
+            height: 150,
             onCloseComplete: () => {
                 updateData();
             }

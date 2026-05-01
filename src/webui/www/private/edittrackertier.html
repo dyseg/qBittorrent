@@ -31,6 +31,7 @@
 
             document.getElementById("trackerTier").value = searchParams.get("tier");
             document.getElementById("trackerTier").focus();
+            document.getElementById("trackerTier").select();            
 
             document.getElementById("editTrackerTierButton").addEventListener("click", (e) => {
                 e.preventDefault();

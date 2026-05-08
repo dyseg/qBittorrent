@@ -1331,7 +1331,7 @@ void TorrentsController::addAction()
                 ++failure;
             }
         }
-        else if (!downloaderParam.isEmpty())
+        else if (!downloaderParam.isEmpty() && !infoHash.isValid())
         {
             if (!filePriorities.isEmpty())
                 throw APIError(APIErrorType::BadParams, tr("`filePriorities` may only be specified when metadata has already been fetched"));

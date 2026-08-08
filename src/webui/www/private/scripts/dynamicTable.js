@@ -140,12 +140,8 @@ window.qBittorrent.DynamicTable ??= (() => {
 
             this.dynamicTableDiv.addEventListener("click", (e) => {
                 const tr = e.target.closest("tr");
-                if (!tr) {
-                    // clicking on the table body deselects all rows,
-                    // unless the click was on a tracker tier button
-                    if (e.target.className === "trackerTierButton")
-                        return;
-
+                if ((tr === null) || (tr.rowId === undefined)) {
+                    // clicking on the table body deselects all rows
                     this.deselectAll();
                     this.setRowClass();
                     return;
@@ -833,7 +829,14 @@ window.qBittorrent.DynamicTable ??= (() => {
                     this.selectedRows.push(row.rowId);
                 }
                 else if (select) {
-                    this.selectedRows.push(row.rowId);
+                    if (this.useVirtualList) {
+                        this.selectedRows.push(row.rowId);
+                    }
+                    else {
+                        const tr = this.getTrByRowId(row.rowId);
+                        if ((tr !== null) && !tr.classList.contains("invisible"))
+                            this.selectedRows.push(row.rowId);
+                    }
                 }
             }
             this.setRowClass();
@@ -1854,7 +1857,7 @@ window.qBittorrent.DynamicTable ??= (() => {
             super.setupCommonEvents();
             this.dynamicTableDiv.addEventListener("dblclick", (e) => {
                 const tr = e.target.closest("tr");
-                if (!tr)
+                if ((tr === null) || (tr.rowId === undefined))
                     return;
 
                 this.deselectAll();

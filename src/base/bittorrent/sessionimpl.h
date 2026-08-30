@@ -189,6 +189,8 @@ namespace BitTorrent
 
         QString getDHTBootstrapNodes() const override;
         void setDHTBootstrapNodes(const QString &nodes) override;
+        QString getWebTorrentSTUNServer() const override;
+        void setWebTorrentSTUNServer(const QString &server) override;
         bool isDHTEnabled() const override;
         void setDHTEnabled(bool enabled) override;
         bool isLSDEnabled() const override;
@@ -308,6 +310,8 @@ namespace BitTorrent
         void setPeerTurnoverInterval(int val) override;
         int requestQueueSize() const override;
         void setRequestQueueSize(int val) override;
+        int maxOutstandingBlockRequests() const override;
+        void setMaxOutstandingBlockRequests(int val) override;
         int asyncIOThreads() const override;
         void setAsyncIOThreads(int num) override;
         int hashingThreads() const override;
@@ -667,6 +671,7 @@ namespace BitTorrent
         void updateTrackersFromFile();
 
         CachedSettingValue<QString> m_DHTBootstrapNodes;
+        CachedSettingValue<QString> m_webTorrentSTUNServer;
         CachedSettingValue<bool> m_isDHTEnabled;
         CachedSettingValue<bool> m_isLSDEnabled;
         CachedSettingValue<bool> m_isPeXEnabled;
@@ -787,6 +792,7 @@ namespace BitTorrent
         CachedSettingValue<int> m_peerTurnoverCutoff;
         CachedSettingValue<int> m_peerTurnoverInterval;
         CachedSettingValue<int> m_requestQueueSize;
+        CachedSettingValue<int> m_maxOutstandingBlockRequests;
         CachedSettingValue<bool> m_isExcludedFileNamesEnabled;
         CachedSettingValue<QStringList> m_excludedFileNames;
         CachedSettingValue<QStringList> m_bannedIPs;

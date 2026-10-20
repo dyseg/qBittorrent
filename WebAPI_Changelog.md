@@ -1,5 +1,10 @@
 # WebAPI Changelog
 
+## 2.17.0
+
+* [#24955](https://github.com/qbittorrent/qBittorrent/pull/24955)
+  * `search/results` endpoint includes `engineFullName` (string) data as the display name of the engine
+
 ## 2.16.2
 
 * [#24920](https://github.com/qbittorrent/qBittorrent/pull/24920)

@@ -415,8 +415,6 @@ window.qBittorrent.ContextMenu ??= (() => {
             }
 
             if (all_are_downloaded) {
-                this.hideItem("downloadLimit");
-                this.menu.querySelector("a[href$=uploadLimit]").parentNode.classList.add("separator");
                 this.hideItem("sequentialDownload");
                 this.hideItem("firstLastPiecePrio");
                 this.showItem("superSeeding");
@@ -441,8 +439,6 @@ window.qBittorrent.ContextMenu ??= (() => {
                 this.setItemChecked("sequentialDownload", all_are_seq_dl);
                 this.setItemChecked("firstLastPiecePrio", all_are_f_l_piece_prio);
 
-                this.showItem("downloadLimit");
-                this.menu.querySelector("a[href$=uploadLimit]").parentNode.classList.remove("separator");
                 this.hideItem("superSeeding");
             }
 

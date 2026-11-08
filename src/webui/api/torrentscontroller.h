@@ -113,6 +113,12 @@ private slots:
     void setForceStartAction();
     void toggleSequentialDownloadAction();
     void toggleFirstLastPiecePrioAction();
+    void setSequentialDownloadAction();
+    void setFirstLastPiecePrioAction();
+    void setDHTDisabledAction();
+    void setPEXDisabledAction();
+    void setLSDDisabledAction();
+    void setTorrentOptionsAction();
     void renameFileAction();
     void renameFolderAction();
     void exportAction();

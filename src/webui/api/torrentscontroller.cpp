@@ -1795,6 +1795,207 @@ void TorrentsController::toggleFirstLastPiecePrioAction()
     setResult(QString());
 }
 
+void TorrentsController::setSequentialDownloadAction()
+{
+    requireParams({u"hashes"_s, u"enable"_s});
+
+    const bool enable = parseBool(params()[u"enable"_s]).value_or(false);
+    const QStringList hashes {params()[u"hashes"_s].split(u'|')};
+    applyToTorrents(hashes, [enable](BitTorrent::Torrent *const torrent)
+    {
+        torrent->setSequentialDownload(enable);
+    });
+
+    setResult(QString());
+}
+
+void TorrentsController::setFirstLastPiecePrioAction()
+{
+    requireParams({u"hashes"_s, u"enable"_s});
+
+    const bool enable = parseBool(params()[u"enable"_s]).value_or(false);
+    const QStringList hashes {params()[u"hashes"_s].split(u'|')};
+    applyToTorrents(hashes, [enable](BitTorrent::Torrent *const torrent)
+    {
+        torrent->setFirstLastPiecePriority(enable);
+    });
+
+    setResult(QString());
+}
+
+void TorrentsController::setDHTDisabledAction()
+{
+    requireParams({u"hashes"_s, u"disable"_s});
+
+    const bool disable = parseBool(params()[u"disable"_s]).value_or(false);
+    const QStringList hashes {params()[u"hashes"_s].split(u'|')};
+    applyToTorrents(hashes, [disable](BitTorrent::Torrent *const torrent)
+    {
+        if (!torrent->isPrivate())
+            torrent->setDHTDisabled(disable);
+    });
+
+    setResult(QString());
+}
+
+void TorrentsController::setPEXDisabledAction()
+{
+    requireParams({u"hashes"_s, u"disable"_s});
+
+    const bool disable = parseBool(params()[u"disable"_s]).value_or(false);
+    const QStringList hashes {params()[u"hashes"_s].split(u'|')};
+    applyToTorrents(hashes, [disable](BitTorrent::Torrent *const torrent)
+    {
+        if (!torrent->isPrivate())
+            torrent->setPEXDisabled(disable);
+    });
+
+    setResult(QString());
+}
+
+void TorrentsController::setLSDDisabledAction()
+{
+    requireParams({u"hashes"_s, u"disable"_s});
+
+    const bool disable = parseBool(params()[u"disable"_s]).value_or(false);
+    const QStringList hashes {params()[u"hashes"_s].split(u'|')};
+    applyToTorrents(hashes, [disable](BitTorrent::Torrent *const torrent)
+    {
+        if (!torrent->isPrivate())
+            torrent->setLSDDisabled(disable);
+    });
+
+    setResult(QString());
+}
+
+void TorrentsController::setTorrentOptionsAction()
+{
+    requireParams({u"hashes"_s});
+
+    const QStringList hashes = params()[u"hashes"_s].split(u'|');
+    auto *session = BitTorrent::Session::instance();
+
+    const bool hasAutoTMM = params().contains(u"autoTMM"_s);
+    const std::optional<bool> autoTMM = hasAutoTMM ? parseBool(params()[u"autoTMM"_s]) : std::nullopt;
+
+    const bool hasSavePath = params().contains(u"savePath"_s);
+    const Path savePath = hasSavePath ? Path(params()[u"savePath"_s].trimmed()) : Path();
+
+    const bool hasUseDownloadPath = params().contains(u"useDownloadPath"_s);
+    const std::optional<bool> useDownloadPath = hasUseDownloadPath ? parseBool(params()[u"useDownloadPath"_s]) : std::nullopt;
+
+    const bool hasDownloadPath = params().contains(u"downloadPath"_s);
+    const Path downloadPath = hasDownloadPath ? Path(params()[u"downloadPath"_s].trimmed()) : Path();
+
+    const bool hasCategory = params().contains(u"category"_s);
+    const QString category = hasCategory ? params()[u"category"_s] : QString();
+
+    const bool hasUpLimit = params().contains(u"upLimit"_s);
+    qlonglong upLimit = hasUpLimit ? params()[u"upLimit"_s].toLongLong() : -1;
+    if (upLimit == 0)
+        upLimit = -1;
+
+    const bool hasDownLimit = params().contains(u"downLimit"_s);
+    qlonglong downLimit = hasDownLimit ? params()[u"downLimit"_s].toLongLong() : -1;
+    if (downLimit == 0)
+        downLimit = -1;
+
+    const bool hasRatioLimit = params().contains(u"ratioLimit"_s);
+    const double ratioLimit = hasRatioLimit ? params()[u"ratioLimit"_s].toDouble() : -2.0;
+
+    const bool hasSeedingTimeLimit = params().contains(u"seedingTimeLimit"_s);
+    const int seedingTimeLimit = hasSeedingTimeLimit ? params()[u"seedingTimeLimit"_s].toInt() : -2;
+
+    const bool hasInactiveSeedingTimeLimit = params().contains(u"inactiveSeedingTimeLimit"_s);
+    const int inactiveSeedingTimeLimit = hasInactiveSeedingTimeLimit ? params()[u"inactiveSeedingTimeLimit"_s].toInt() : -2;
+
+    const bool hasShareLimitsMode = params().contains(u"shareLimitsMode"_s);
+    const auto shareLimitsMode = hasShareLimitsMode
+        ? Utils::String::toEnum(params()[u"shareLimitsMode"_s], BitTorrent::ShareLimitsMode::Default)
+        : BitTorrent::ShareLimitsMode::Default;
+
+    const bool hasShareLimitAction = params().contains(u"shareLimitAction"_s);
+    const auto shareLimitAction = hasShareLimitAction
+        ? Utils::String::toEnum(params()[u"shareLimitAction"_s], BitTorrent::ShareLimitAction::Default)
+        : BitTorrent::ShareLimitAction::Default;
+
+    const bool hasDisableDHT = params().contains(u"disableDHT"_s);
+    const std::optional<bool> disableDHT = hasDisableDHT ? parseBool(params()[u"disableDHT"_s]) : std::nullopt;
+
+    const bool hasDisablePEX = params().contains(u"disablePEX"_s);
+    const std::optional<bool> disablePEX = hasDisablePEX ? parseBool(params()[u"disablePEX"_s]) : std::nullopt;
+
+    const bool hasDisableLSD = params().contains(u"disableLSD"_s);
+    const std::optional<bool> disableLSD = hasDisableLSD ? parseBool(params()[u"disableLSD"_s]) : std::nullopt;
+
+    const bool hasSequential = params().contains(u"sequential"_s);
+    const std::optional<bool> sequential = hasSequential ? parseBool(params()[u"sequential"_s]) : std::nullopt;
+
+    const bool hasFirstLastPieces = params().contains(u"firstLastPieces"_s);
+    const std::optional<bool> firstLastPieces = hasFirstLastPieces ? parseBool(params()[u"firstLastPieces"_s]) : std::nullopt;
+
+    if (hasCategory && !category.isEmpty() && !session->categories().contains(category))
+        session->addCategory(category);
+
+    applyToTorrents(hashes, [&](BitTorrent::Torrent *const torrent)
+    {
+        if (autoTMM.has_value())
+            torrent->setAutoTMMEnabled(*autoTMM);
+
+        if (!torrent->isAutoTMMEnabled())
+        {
+            if (hasSavePath && !savePath.isEmpty())
+                torrent->setSavePath(savePath);
+
+            if (useDownloadPath.has_value())
+            {
+                if (*useDownloadPath && !downloadPath.isEmpty())
+                    torrent->setDownloadPath(downloadPath);
+                else if (!*useDownloadPath)
+                    torrent->setDownloadPath({});
+            }
+        }
+
+        if (hasCategory)
+            torrent->setCategory(category);
+
+        if (hasUpLimit)
+            torrent->setUploadLimit(upLimit);
+        if (hasDownLimit)
+            torrent->setDownloadLimit(downLimit);
+
+        BitTorrent::ShareLimits shareLimits = torrent->shareLimits();
+        if (hasRatioLimit)
+            shareLimits.ratioLimit = ratioLimit;
+        if (hasSeedingTimeLimit)
+            shareLimits.seedingTimeLimit = seedingTimeLimit;
+        if (hasInactiveSeedingTimeLimit)
+            shareLimits.inactiveSeedingTimeLimit = inactiveSeedingTimeLimit;
+        if (hasShareLimitsMode)
+            shareLimits.mode = shareLimitsMode;
+        if (hasShareLimitAction)
+            shareLimits.action = shareLimitAction;
+        torrent->setShareLimits(std::move(shareLimits));
+
+        if (!torrent->isPrivate())
+        {
+            if (disableDHT.has_value())
+                torrent->setDHTDisabled(*disableDHT);
+            if (disablePEX.has_value())
+                torrent->setPEXDisabled(*disablePEX);
+            if (disableLSD.has_value())
+                torrent->setLSDDisabled(*disableLSD);
+        }
+
+        if (sequential.has_value())
+            torrent->setSequentialDownload(*sequential);
+        if (firstLastPieces.has_value())
+            torrent->setFirstLastPiecePriority(*firstLastPieces);
+    });
+
+    setResult(QString());
+}
+
 void TorrentsController::setSuperSeedingAction()
 {
     requireParams({u"hashes"_s, u"value"_s});
@@ -1914,9 +2115,11 @@ void TorrentsController::setLocationAction()
 
 void TorrentsController::setSavePathAction()
 {
-    requireParams({u"id"_s, u"path"_s});
+    const QString idParam = params().value(u"hashes"_s, params().value(u"id"_s));
+    if (idParam.isEmpty() || !params().contains(u"path"_s))
+        throw APIError(APIErrorType::BadParams, tr("Missing parameter"));
 
-    const QStringList ids {params()[u"id"_s].split(u'|')};
+    const QStringList ids {idParam.split(u'|')};
     const Path newPath {params()[u"path"_s]};
 
     if (newPath.isEmpty())
@@ -1941,9 +2144,11 @@ void TorrentsController::setSavePathAction()
 
 void TorrentsController::setDownloadPathAction()
 {
-    requireParams({u"id"_s, u"path"_s});
+    const QString idParam = params().value(u"hashes"_s, params().value(u"id"_s));
+    if (idParam.isEmpty() || !params().contains(u"path"_s))
+        throw APIError(APIErrorType::BadParams, tr("Missing parameter"));
 
-    const QStringList ids {params()[u"id"_s].split(u'|')};
+    const QStringList ids {idParam.split(u'|')};
     const Path newPath {params()[u"path"_s]};
 
     if (!newPath.isEmpty())

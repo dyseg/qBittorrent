@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="${LANG}" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <title>QBT_TR(Torrent Options)QBT_TR[CONTEXT=TorrentOptionsDialog]</title>
+    <link rel="stylesheet" href="css/style.css?v=${CACHEID}" type="text/css">
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 8px 10px 0 10px;
+        }
+
+        .speedLimitGrid {
+            display: grid;
+            grid-template-columns: max-content 1fr max-content;
+            align-items: center;
+            gap: 6px 8px;
+        }
+
+        #shareLimitsGrid {
+            display: grid;
+            grid-template-columns: max-content max-content max-content max-content;
+            align-items: center;
+            gap: 6px 8px;
+        }
+
+        #shareLimitsGrid select,
+        #shareLimitsGrid input[type="number"] {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #shareLimitsGrid input[type="number"] {
+            min-width: 90px;
+        }
+
+        #shareLimitsGrid>.shareLimitsActionRow {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #shareLimitsGrid .shareLimitsWideSelect {
+            grid-column: 2 / -1;
+        }
+
+        .checkboxGrid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+    </style>
+    <script defer src="scripts/localpreferences.js?v=${CACHEID}"></script>
+    <script defer src="scripts/color-scheme.js?v=${CACHEID}"></script>
+    <script defer src="scripts/misc.js?locale=${LANG}&v=${CACHEID}"></script>
+    <script defer src="scripts/pathAutofill.js?v=${CACHEID}"></script>
+    <script>
+        "use strict";
+
+        const UseDefaultLimit = -2;
+        const UnlimitedValue = -1;
+
+        const ShareLimitActionNames = [
+            "Default",
+            "Stop",
+            "Remove",
+            "RemoveWithContent",
+            "EnableSuperSeeding"
+        ];
+
+        window.addEventListener("DOMContentLoaded", async (_event) => {
+            const checkAutoTMM = document.getElementById("checkAutoTMM");
+            const savePathFieldset = document.getElementById("savePathFieldset");
+            const savePathInput = document.getElementById("savePath");
+            const checkUseDownloadPath = document.getElementById("checkUseDownloadPath");
+            const downloadPathInput = document.getElementById("downloadPath");
+
+            const categorySelect = document.getElementById("categorySelect");
+            const categoryInput = document.getElementById("categoryInput");
+
+            const uploadLimitSlider = document.getElementById("uploadLimitSlider");
+            const uploadLimitInput = document.getElementById("uploadLimitInput");
+            const downloadLimitSlider = document.getElementById("downloadLimitSlider");
+            const downloadLimitInput = document.getElementById("downloadLimitInput");
+
+            const ratioMode = document.getElementById("ratioMode");
+            const ratioValue = document.getElementById("ratioValue");
+            const seedingTimeMode = document.getElementById("seedingTimeMode");
+            const seedingTimeValue = document.getElementById("seedingTimeValue");
+            const inactiveSeedingTimeMode = document.getElementById("inactiveSeedingTimeMode");
+            const inactiveSeedingTimeValue = document.getElementById("inactiveSeedingTimeValue");
+            const shareLimitsMode = document.getElementById("shareLimitsMode");
+            const shareLimitAction = document.getElementById("shareLimitAction");
+
+            const checkDisableDHT = document.getElementById("checkDisableDHT");
+            const checkSequential = document.getElementById("checkSequential");
+            const checkDisablePEX = document.getElementById("checkDisablePEX");
+            const checkFirstLastPieces = document.getElementById("checkFirstLastPieces");
+            const checkDisableLSD = document.getElementById("checkDisableLSD");
+
+            const saveButton = document.getElementById("saveButton");
+            const cancelButton = document.getElementById("cancelButton");
+
+            window.addEventListener("keydown", (event) => {
+                switch (event.key) {
+                    case "Enter":
+                        event.preventDefault();
+                        saveButton.click();
+                        break;
+                    case "Escape":
+                        event.preventDefault();
+                        window.parent.qBittorrent.Client.closeFrameWindow(window);
+                        break;
+                }
+            });
+
+            cancelButton.addEventListener("click", (_e) => {
+                window.parent.qBittorrent.Client.closeFrameWindow(window);
+            });
+
+            const searchParams = new URLSearchParams(window.location.search);
+            const hashesParam = searchParams.get("hashes");
+            if (hashesParam === null)
+                return;
+
+            const hashes = hashesParam.split("|");
+            if (hashes.length === 0)
+                return;
+
+            const parentTorrentsTable = window.parent.torrentsTable;
+            if (parentTorrentsTable === undefined)
+                return;
+
+            const torrentRows = [];
+            for (const hash of hashes) {
+                const row = parentTorrentsTable.getRow(hash);
+                if (row !== undefined)
+                    torrentRows.push(row.full_data);
+            }
+
+            if (torrentRows.length === 0)
+                return;
+
+            const pref = window.parent.qBittorrent.Cache.preferences.get();
+            const categoryMap = window.parent.qBittorrent.Client.categoryMap;
+
+            let globalLimits = { up_limit: 0, dl_limit: 0 };
+            try {
+                const speedLimitsResponse = await fetch("api/v2/transfer/getSpeedLimits");
+                if (speedLimitsResponse.ok)
+                    globalLimits = await speedLimitsResponse.json();
+            }
+            catch {
+                // Ignore fetch errors
+            }
+
+            const firstTorrent = torrentRows[0];
+            let allSameAutoTMM = true;
+            let allSameSavePath = true;
+            let allSameDownloadPath = true;
+            let allSameCategory = true;
+            let allSameUpLimit = true;
+            let allSameDownLimit = true;
+            let allSameRatio = true;
+            let allSameSeedingTime = true;
+            let allSameInactiveSeedingTime = true;
+            let allSameShareLimitsMode = true;
+            let allSameShareLimitAction = true;
+            let allTorrentsArePrivate = true;
+            let allSameDHT = true;
+            let allSamePEX = true;
+            let allSameLSD = true;
+            let allSameSequential = true;
+            let allSameFirstLastPieces = true;
+
+            for (const torrent of torrentRows) {
+                if (torrent.auto_tmm !== firstTorrent.auto_tmm)
+                    allSameAutoTMM = false;
+                if (torrent.save_path !== firstTorrent.save_path)
+                    allSameSavePath = false;
+                if (torrent.download_path !== firstTorrent.download_path)
+                    allSameDownloadPath = false;
+                if (torrent.category !== firstTorrent.category)
+                    allSameCategory = false;
+                if (torrent.up_limit !== firstTorrent.up_limit)
+                    allSameUpLimit = false;
+                if (torrent.dl_limit !== firstTorrent.dl_limit)
+                    allSameDownLimit = false;
+                if (torrent.ratio_limit !== firstTorrent.ratio_limit)
+                    allSameRatio = false;
+                if (torrent.seeding_time_limit !== firstTorrent.seeding_time_limit)
+                    allSameSeedingTime = false;
+                if (torrent.inactive_seeding_time_limit !== firstTorrent.inactive_seeding_time_limit)
+                    allSameInactiveSeedingTime = false;
+                if (torrent.share_limits_mode !== firstTorrent.share_limits_mode)
+                    allSameShareLimitsMode = false;
+                if (torrent.share_limit_action !== firstTorrent.share_limit_action)
+                    allSameShareLimitAction = false;
+                if (torrent.private !== true)
+                    allTorrentsArePrivate = false;
+                if (torrent.dht_disabled !== firstTorrent.dht_disabled)
+                    allSameDHT = false;
+                if (torrent.pex_disabled !== firstTorrent.pex_disabled)
+                    allSamePEX = false;
+                if (torrent.lsd_disabled !== firstTorrent.lsd_disabled)
+                    allSameLSD = false;
+                if (torrent.seq_dl !== firstTorrent.seq_dl)
+                    allSameSequential = false;
+                if (torrent.f_l_piece_prio !== firstTorrent.f_l_piece_prio)
+                    allSameFirstLastPieces = false;
+            }
+
+            // Auto TMM
+            if (allSameAutoTMM)
+                checkAutoTMM.checked = (firstTorrent.auto_tmm === true);
+            else
+                checkAutoTMM.indeterminate = true;
+
+            // Save at & download path
+            if (allSameSavePath) {
+                savePathInput.value = firstTorrent.save_path ?? "";
+            }
+            else {
+                savePathInput.value = "";
+                savePathInput.placeholder = "≠";
+            }
+
+            if (allSameDownloadPath) {
+                const hasDlPath = ((firstTorrent.download_path !== undefined) && (firstTorrent.download_path !== "") && (firstTorrent.download_path !== null));
+                checkUseDownloadPath.checked = hasDlPath;
+                downloadPathInput.value = hasDlPath ? firstTorrent.download_path : "";
+            }
+            else {
+                checkUseDownloadPath.indeterminate = true;
+                downloadPathInput.value = "";
+                downloadPathInput.placeholder = "≠";
+            }
+            downloadPathInput.disabled = !checkUseDownloadPath.checked;
+
+            // Categories
+            const categories = [...categoryMap.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+            categorySelect.innerHTML = "";
+
+            if (!allSameCategory) {
+                const multipleOpt = document.createElement("option");
+                multipleOpt.value = "__multiple__";
+                multipleOpt.textContent = "--QBT_TR(Currently used categories)QBT_TR[CONTEXT=TorrentOptionsDialog]--";
+                multipleOpt.selected = true;
+                categorySelect.appendChild(multipleOpt);
+            }
+
+            const noneOpt = document.createElement("option");
+            noneOpt.value = "";
+            noneOpt.textContent = "";
+            categorySelect.appendChild(noneOpt);
+
+            for (const category of categories) {
+                const opt = document.createElement("option");
+                opt.value = category;
+                opt.textContent = category;
+                categorySelect.appendChild(opt);
+            }
+
+            const otherOpt = document.createElement("option");
+            otherOpt.value = "\\other";
+            otherOpt.textContent = "QBT_TR(New...)QBT_TR[CONTEXT=AddNewTorrentDialog]";
+            categorySelect.appendChild(otherOpt);
+
+            if (allSameCategory) {
+                const currentCat = firstTorrent.category ?? "";
+                if (categories.includes(currentCat) || (currentCat === "")) {
+                    categorySelect.value = currentCat;
+                    categoryInput.hidden = true;
+                    categoryInput.value = currentCat;
+                }
+                else {
+                    categorySelect.value = "\\other";
+                    categoryInput.hidden = false;
+                    categoryInput.value = currentCat;
+                }
+            }
+            else {
+                categoryInput.hidden = true;
+                categoryInput.value = "";
+            }
+
+            categorySelect.addEventListener("change", (_e) => {
+                if (categorySelect.value === "\\other") {
+                    categoryInput.hidden = false;
+                    categoryInput.value = "";
+                    categoryInput.focus();
+                }
+                else {
+                    categoryInput.hidden = true;
+                    categoryInput.value = (categorySelect.value === "__multiple__") ? "" : categorySelect.value;
+                }
+                handleCategoryChanged();
+            });
+
+            categoryInput.addEventListener("input", (_e) => {
+                handleCategoryChanged();
+            });
+
+            const getSelectedCategory = () => {
+                if (categorySelect.value === "\\other")
+                    return categoryInput.value.trim();
+                if (categorySelect.value === "__multiple__")
+                    return "__multiple__";
+                return categorySelect.value;
+            };
+
+            const parentCategoryName = (categoryName) => {
+                const separatorIndex = categoryName.lastIndexOf("/");
+                return (separatorIndex >= 0) ? categoryName.substring(0, separatorIndex) : "";
+            };
+
+            const globalShareLimits = () => ({
+                ratioLimit: pref.max_ratio,
+                seedingTimeLimit: pref.max_seeding_time,
+                inactiveSeedingTimeLimit: pref.max_inactive_seeding_time,
+                shareLimitsMode: pref.share_limits_mode,
+                shareLimitAction: ShareLimitActionNames[Number(pref.max_ratio_act)] ?? "Default"
+            });
+
+            const getCategoryShareLimits = (categoryName) => {
+                if ((categoryName === "") || (categoryName === "__multiple__"))
+                    return globalShareLimits();
+
+                const own = categoryMap.get(categoryName) ?? {};
+                const parent = getCategoryShareLimits(parentCategoryName(categoryName));
+                const resolve = (limit, unset, parentLimit) => (((limit === undefined) || (limit === null) || (limit === unset)) ? parentLimit : limit);
+                return {
+                    ratioLimit: resolve(own.ratioLimit, UseDefaultLimit, parent.ratioLimit),
+                    seedingTimeLimit: resolve(own.seedingTimeLimit, UseDefaultLimit, parent.seedingTimeLimit),
+                    inactiveSeedingTimeLimit: resolve(own.inactiveSeedingTimeLimit, UseDefaultLimit, parent.inactiveSeedingTimeLimit),
+                    shareLimitsMode: resolve(own.shareLimitsMode, "Default", parent.shareLimitsMode),
+                    shareLimitAction: resolve(own.shareLimitAction, "Default", parent.shareLimitAction)
+                };
+            };
+
+            const updateShareLimitsDefaults = (catName) => {
+                const hasCategory = (catName !== "") && (catName !== "__multiple__");
+                const inheritedLimits = getCategoryShareLimits(catName);
+
+                const inheritedLabel = hasCategory
+                    ? "QBT_TR(From category)QBT_TR[CONTEXT=TorrentShareLimitsWidget]"
+                    : "QBT_TR(Default)QBT_TR[CONTEXT=TorrentShareLimitsWidget]";
+
+                ratioMode.options[0].textContent = inheritedLabel;
+                seedingTimeMode.options[0].textContent = inheritedLabel;
+                inactiveSeedingTimeMode.options[0].textContent = inheritedLabel;
+
+                if (ratioMode.value === "default") {
+                    const ratio = Number(inheritedLimits.ratioLimit);
+                    ratioValue.value = ((ratio >= 0) ? ratio.toFixed(2) : "0.00");
+                }
+                if (seedingTimeMode.value === "default") {
+                    const time = Number(inheritedLimits.seedingTimeLimit);
+                    seedingTimeValue.value = ((time >= 0) ? time : 0);
+                }
+                if (inactiveSeedingTimeMode.value === "default") {
+                    const time = Number(inheritedLimits.inactiveSeedingTimeLimit);
+                    inactiveSeedingTimeValue.value = ((time >= 0) ? time : 0);
+                }
+
+                const setInheritedLabel = (selectElem, inheritedValue) => {
+                    const inheritedOption = Array.prototype.find.call(selectElem.options, (option) => option.value === inheritedValue);
+                    if ((inheritedOption === undefined) || (inheritedValue === "Default")) {
+                        selectElem.options[0].textContent = inheritedLabel;
+                        return;
+                    }
+                    selectElem.options[0].textContent = (hasCategory
+                        ? "QBT_TR(From category (%1))QBT_TR[CONTEXT=TorrentShareLimitsWidget]"
+                        : "QBT_TR(Default (%1))QBT_TR[CONTEXT=TorrentShareLimitsWidget]").replace("%1", inheritedOption.textContent);
+                };
+
+                setInheritedLabel(shareLimitsMode, inheritedLimits.shareLimitsMode);
+                setInheritedLabel(shareLimitAction, inheritedLimits.shareLimitAction);
+            };
+
+            const handleCategoryChanged = () => {
+                const catName = getSelectedCategory();
+                if (checkAutoTMM.checked && !checkAutoTMM.indeterminate) {
+                    if (catName === "__multiple__") {
+                        savePathInput.value = "";
+                        downloadPathInput.value = "";
+                        checkUseDownloadPath.indeterminate = true;
+                    }
+                    else {
+                        const catData = categoryMap.get(catName);
+                        const savePath = catData?.savePath ?? pref.save_path ?? "";
+                        savePathInput.value = savePath;
+
+                        const dlPath = catData?.downloadPath;
+                        const hasDlPath = (dlPath !== undefined) && (dlPath !== "") && (dlPath !== false) && (dlPath !== null);
+                        checkUseDownloadPath.checked = hasDlPath;
+                        downloadPathInput.value = hasDlPath ? dlPath : "";
+                        downloadPathInput.disabled = !hasDlPath;
+                    }
+                }
+                updateShareLimitsDefaults(catName);
+            };
+
+            const handleTMMChanged = () => {
+                if (checkAutoTMM.checked && !checkAutoTMM.indeterminate) {
+                    savePathFieldset.disabled = true;
+                    handleCategoryChanged();
+                }
+                else {
+                    savePathFieldset.disabled = false;
+                    if (allSameSavePath)
+                        savePathInput.value = firstTorrent.save_path ?? "";
+                    if (allSameDownloadPath) {
+                        const hasDlPath = ((firstTorrent.download_path !== undefined) && (firstTorrent.download_path !== "") && (firstTorrent.download_path !== null));
+                        checkUseDownloadPath.checked = hasDlPath;
+                        downloadPathInput.value = hasDlPath ? firstTorrent.download_path : "";
+                        downloadPathInput.disabled = !hasDlPath;
+                    }
+                }
+            };
+
+            checkAutoTMM.addEventListener("change", (_e) => {
+                handleTMMChanged();
+            });
+
+            checkUseDownloadPath.addEventListener("change", (_e) => {
+                downloadPathInput.disabled = !checkUseDownloadPath.checked;
+                if (checkUseDownloadPath.checked && (downloadPathInput.value === ""))
+                    downloadPathInput.value = pref.temp_path ?? "";
+            });
+
+            // Speed limits setup
+            let upLimitChanged = false;
+            let downLimitChanged = false;
+
+            const globalUp = Math.max(0, Math.round(Number(globalLimits.up_limit) / 1024));
+            const globalDl = Math.max(0, Math.round(Number(globalLimits.dl_limit) / 1024));
+
+            const initialUpVal = (allSameUpLimit && (firstTorrent.up_limit > 0)) ? Math.round(firstTorrent.up_limit / 1024) : 0;
+            const initialDownVal = (allSameDownLimit && (firstTorrent.dl_limit > 0)) ? Math.round(firstTorrent.dl_limit / 1024) : 0;
+
+            const maxUp = Math.max(10000, globalUp, initialUpVal);
+            const maxDl = Math.max(10000, globalDl, initialDownVal);
+
+            uploadLimitSlider.max = maxUp;
+            downloadLimitSlider.max = maxDl;
+
+            const formatLimitText = (val) => ((val <= 0) ? "∞" : String(val));
+
+            if (allSameUpLimit) {
+                uploadLimitSlider.value = initialUpVal;
+                uploadLimitInput.value = formatLimitText(initialUpVal);
+            }
+            else {
+                uploadLimitSlider.value = Math.round(maxUp / 2);
+                uploadLimitInput.value = "";
+                uploadLimitInput.placeholder = "≠";
+            }
+
+            if (allSameDownLimit) {
+                downloadLimitSlider.value = initialDownVal;
+                downloadLimitInput.value = formatLimitText(initialDownVal);
+            }
+            else {
+                downloadLimitSlider.value = Math.round(maxDl / 2);
+                downloadLimitInput.value = "";
+                downloadLimitInput.placeholder = "≠";
+            }
+
+            uploadLimitSlider.addEventListener("input", (e) => {
+                upLimitChanged = true;
+                const val = Number(e.target.value);
+                uploadLimitInput.value = formatLimitText(val);
+            });
+
+            uploadLimitInput.addEventListener("change", (e) => {
+                upLimitChanged = true;
+                let val = Number(e.target.value);
+                if (Number.isNaN(val) || (val < 0) || (e.target.value.trim() === "∞") || (e.target.value.trim() === ""))
+                    val = 0;
+                if (val > uploadLimitSlider.max)
+                    uploadLimitSlider.max = val;
+                uploadLimitSlider.value = val;
+                uploadLimitInput.value = formatLimitText(val);
+            });
+
+            downloadLimitSlider.addEventListener("input", (e) => {
+                downLimitChanged = true;
+                const val = Number(e.target.value);
+                downloadLimitInput.value = formatLimitText(val);
+            });
+
+            downloadLimitInput.addEventListener("change", (e) => {
+                downLimitChanged = true;
+                let val = Number(e.target.value);
+                if (Number.isNaN(val) || (val < 0) || (e.target.value.trim() === "∞") || (e.target.value.trim() === ""))
+                    val = 0;
+                if (val > downloadLimitSlider.max)
+                    downloadLimitSlider.max = val;
+                downloadLimitSlider.value = val;
+                downloadLimitInput.value = formatLimitText(val);
+            });
+
+            // Share Limits initialization
+            const setupLimitRow = (modeSelect, valueInput, limitVal, allSame) => {
+                if (allSame) {
+                    if (limitVal === UseDefaultLimit) {
+                        modeSelect.value = "default";
+                        valueInput.disabled = true;
+                    }
+                    else if (limitVal === UnlimitedValue) {
+                        modeSelect.value = "unlimited";
+                        valueInput.disabled = true;
+                        valueInput.value = "";
+                    }
+                    else if (limitVal >= 0) {
+                        modeSelect.value = "custom";
+                        valueInput.disabled = false;
+                        valueInput.value = limitVal;
+                    }
+                }
+                else {
+                    modeSelect.value = "default";
+                    valueInput.disabled = true;
+                }
+
+                modeSelect.addEventListener("change", (_e) => {
+                    const isCustom = (modeSelect.value === "custom");
+                    valueInput.disabled = !isCustom;
+                    if (!isCustom) {
+                        const curCat = getSelectedCategory();
+                        updateShareLimitsDefaults(curCat);
+                    }
+                });
+            };
+
+            setupLimitRow(ratioMode, ratioValue, firstTorrent.ratio_limit, allSameRatio);
+            setupLimitRow(seedingTimeMode, seedingTimeValue, firstTorrent.seeding_time_limit, allSameSeedingTime);
+            setupLimitRow(inactiveSeedingTimeMode, inactiveSeedingTimeValue, firstTorrent.inactive_seeding_time_limit, allSameInactiveSeedingTime);
+
+            if (allSameShareLimitsMode)
+                shareLimitsMode.value = firstTorrent.share_limits_mode ?? "Default";
+            if (allSameShareLimitAction)
+                shareLimitAction.value = firstTorrent.share_limit_action ?? "Default";
+
+            // Features checkboxes
+            if (allTorrentsArePrivate) {
+                const privateTip = "QBT_TR(Not applicable to private torrents)QBT_TR[CONTEXT=TorrentOptionsDialog]";
+                checkDisableDHT.checked = true;
+                checkDisableDHT.disabled = true;
+                checkDisableDHT.title = privateTip;
+                checkDisablePEX.checked = true;
+                checkDisablePEX.disabled = true;
+                checkDisablePEX.title = privateTip;
+                checkDisableLSD.checked = true;
+                checkDisableLSD.disabled = true;
+                checkDisableLSD.title = privateTip;
+            }
+            else {
+                if (allSameDHT)
+                    checkDisableDHT.checked = (firstTorrent.dht_disabled === true);
+                else
+                    checkDisableDHT.indeterminate = true;
+
+                if (allSamePEX)
+                    checkDisablePEX.checked = (firstTorrent.pex_disabled === true);
+                else
+                    checkDisablePEX.indeterminate = true;
+
+                if (allSameLSD)
+                    checkDisableLSD.checked = (firstTorrent.lsd_disabled === true);
+                else
+                    checkDisableLSD.indeterminate = true;
+            }
+
+            if (allSameSequential)
+                checkSequential.checked = (firstTorrent.seq_dl === true);
+            else
+                checkSequential.indeterminate = true;
+
+            if (allSameFirstLastPieces)
+                checkFirstLastPieces.checked = (firstTorrent.f_l_piece_prio === true);
+            else
+                checkFirstLastPieces.indeterminate = true;
+
+            handleTMMChanged();
+
+            saveButton.addEventListener("click", async (_e) => {
+                const params = new URLSearchParams({
+                    hashes: hashes.join("|")
+                });
+
+                if (!checkAutoTMM.indeterminate)
+                    params.set("autoTMM", checkAutoTMM.checked);
+
+                if (!checkAutoTMM.checked) {
+                    if ((savePathInput.value !== "") && (savePathInput.value !== "≠"))
+                        params.set("savePath", savePathInput.value.trim());
+
+                    if (!checkUseDownloadPath.indeterminate) {
+                        params.set("useDownloadPath", checkUseDownloadPath.checked);
+                        if (checkUseDownloadPath.checked && (downloadPathInput.value !== "") && (downloadPathInput.value !== "≠"))
+                            params.set("downloadPath", downloadPathInput.value.trim());
+                    }
+                }
+
+                const catVal = getSelectedCategory();
+                if (catVal !== "__multiple__")
+                    params.set("category", catVal);
+
+                if (upLimitChanged) {
+                    const upText = uploadLimitInput.value.trim();
+                    const upVal = ((upText === "∞") || (upText === "") || (Number(upText) <= 0)) ? -1 : Math.round(Number(upText) * 1024);
+                    params.set("upLimit", upVal);
+                }
+
+                if (downLimitChanged) {
+                    const dlText = downloadLimitInput.value.trim();
+                    const dlVal = ((dlText === "∞") || (dlText === "") || (Number(dlText) <= 0)) ? -1 : Math.round(Number(dlText) * 1024);
+                    params.set("downLimit", dlVal);
+                }
+
+                // Share limits
+                if (ratioMode.value === "default")
+                    params.set("ratioLimit", UseDefaultLimit);
+                else if (ratioMode.value === "unlimited")
+                    params.set("ratioLimit", UnlimitedValue);
+                else if (ratioMode.value === "custom")
+                    params.set("ratioLimit", Number(ratioValue.value));
+
+                if (seedingTimeMode.value === "default")
+                    params.set("seedingTimeLimit", UseDefaultLimit);
+                else if (seedingTimeMode.value === "unlimited")
+                    params.set("seedingTimeLimit", UnlimitedValue);
+                else if (seedingTimeMode.value === "custom")
+                    params.set("seedingTimeLimit", Number(seedingTimeValue.value));
+
+                if (inactiveSeedingTimeMode.value === "default")
+                    params.set("inactiveSeedingTimeLimit", UseDefaultLimit);
+                else if (inactiveSeedingTimeMode.value === "unlimited")
+                    params.set("inactiveSeedingTimeLimit", UnlimitedValue);
+                else if (inactiveSeedingTimeMode.value === "custom")
+                    params.set("inactiveSeedingTimeLimit", Number(inactiveSeedingTimeValue.value));
+
+                params.set("shareLimitsMode", shareLimitsMode.value);
+                params.set("shareLimitAction", shareLimitAction.value);
+
+                // Feature checkboxes
+                if (!checkDisableDHT.disabled && !checkDisableDHT.indeterminate)
+                    params.set("disableDHT", checkDisableDHT.checked);
+                if (!checkDisablePEX.disabled && !checkDisablePEX.indeterminate)
+                    params.set("disablePEX", checkDisablePEX.checked);
+                if (!checkDisableLSD.disabled && !checkDisableLSD.indeterminate)
+                    params.set("disableLSD", checkDisableLSD.checked);
+
+                if (!checkSequential.indeterminate)
+                    params.set("sequential", checkSequential.checked);
+                if (!checkFirstLastPieces.indeterminate)
+                    params.set("firstLastPieces", checkFirstLastPieces.checked);
+
+                try {
+                    const response = await fetch("api/v2/torrents/setTorrentOptions", {
+                        method: "POST",
+                        body: params
+                    });
+
+                    if (response.ok)
+                        window.parent.qBittorrent.Client.closeFrameWindow(window);
+                }
+                catch {
+                    // Ignore network error
+                }
+            });
+
+            window.qBittorrent.pathAutofill.attachPathAutofill();
+        });
+    </script>
+</head>
+
+<body>
+    <div>
+        <div style="margin-bottom: 8px;">
+            <input type="checkbox" id="checkAutoTMM">
+            <label for="checkAutoTMM" title="QBT_TR(Automatic mode means that various torrent properties (e.g. save path) will be decided by the associated category)QBT_TR[CONTEXT=TorrentOptionsDialog]">QBT_TR(Automatic Torrent Management)QBT_TR[CONTEXT=TorrentOptionsDialog]</label>
+        </div>
+
+        <fieldset id="savePathFieldset" class="settings" style="text-align: left; margin-bottom: 8px;">
+            <legend>QBT_TR(Save at)QBT_TR[CONTEXT=TorrentOptionsDialog]</legend>
+            <div style="margin-bottom: 6px;">
+                <input type="text" id="savePath" class="pathDirectory" style="width: 100%; box-sizing: border-box;" autocorrect="off" autocapitalize="none">
+            </div>
+            <div style="margin-bottom: 6px;">
+                <input type="checkbox" id="checkUseDownloadPath">
+                <label for="checkUseDownloadPath">QBT_TR(Use another path for incomplete torrent)QBT_TR[CONTEXT=TorrentOptionsDialog]</label>
+            </div>
+            <div>
+                <input type="text" id="downloadPath" class="pathDirectory" style="width: 100%; box-sizing: border-box;" autocorrect="off" autocapitalize="none" disabled>
+            </div>
+        </fieldset>
+
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <label id="categorySelectLabel" for="categorySelect" style="margin-right: 8px; white-space: nowrap;">QBT_TR(Category:)QBT_TR[CONTEXT=TorrentOptionsDialog]</label>
+            <div class="select-watched-folder-editable" style="flex-grow: 1;">
+                <select id="categorySelect" style="width: 100%;" aria-labelledby="categorySelectLabel">
+                    <option selected value="\other"></option>
+                </select>
+                <input type="text" id="categoryInput" style="width: 100%; box-sizing: border-box;" aria-labelledby="categorySelectLabel">
+            </div>
+        </div>
+
+        <fieldset id="speedLimitsFieldset" class="settings" style="text-align: left; margin-bottom: 8px;">
+            <legend>QBT_TR(Torrent Speed Limits)QBT_TR[CONTEXT=TorrentOptionsDialog]</legend>
+            <div class="speedLimitGrid">
+                <label id="uploadLimitLabel" for="uploadLimitInput">QBT_TR(Upload:)QBT_TR[CONTEXT=TorrentOptionsDialog]</label>
+                <input type="range" id="uploadLimitSlider" min="0" max="10000" value="0" aria-labelledby="uploadLimitLabel">
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <input type="text" id="uploadLimitInput" size="7" placeholder="∞" style="text-align: center;" aria-labelledby="uploadLimitLabel">
+                    <span>QBT_TR(KiB/s)QBT_TR[CONTEXT=SpeedLimit]</span>
+                </div>
+
+                <label id="downloadLimitLabel" for="downloadLimitInput">QBT_TR(Download:)QBT_TR[CONTEXT=TorrentOptionsDialog]</label>
+                <input type="range" id="downloadLimitSlider" min="0" max="10000" value="0" aria-labelledby="downloadLimitLabel">
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <input type="text" id="downloadLimitInput" size="7" placeholder="∞" style="text-align: center;" aria-labelledby="downloadLimitLabel">
+                    <span>QBT_TR(KiB/s)QBT_TR[CONTEXT=SpeedLimit]</span>
+                </div>
+            </div>
+            <div style="font-size: 0.9em; font-style: italic; margin-top: 4px;">
+                QBT_TR(These will not exceed the global limits)QBT_TR[CONTEXT=TorrentOptionsDialog]
+            </div>
+        </fieldset>
+
+        <fieldset id="shareLimitsFieldset" class="settings" style="text-align: left; margin-bottom: 8px;">
+            <legend>QBT_TR(Torrent Share Limits)QBT_TR[CONTEXT=TorrentOptionsDialog]</legend>
+            <div id="shareLimitsGrid">
+                <label id="ratioLimitLabel" for="ratioMode">QBT_TR(Ratio:)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</label>
+                <select id="ratioMode">
+                    <option selected value="default">QBT_TR(Default)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                    <option value="unlimited">QBT_TR(Unlimited)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                    <option value="custom">QBT_TR(Set to)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                </select>
+                <input type="number" id="ratioValue" step="0.05" min="0" disabled aria-labelledby="ratioLimitLabel">
+                <span></span>
+
+                <label id="seedingTimeLimitLabel" for="seedingTimeMode">QBT_TR(Seeding time:)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</label>
+                <select id="seedingTimeMode">
+                    <option selected value="default">QBT_TR(Default)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                    <option value="unlimited">QBT_TR(Unlimited)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                    <option value="custom">QBT_TR(Set to)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                </select>
+                <input type="number" id="seedingTimeValue" step="1" min="0" disabled aria-labelledby="seedingTimeLimitLabel">
+                <span>QBT_TR(min)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</span>
+
+                <label id="inactiveSeedingTimeLimitLabel" for="inactiveSeedingTimeMode">QBT_TR(Inactive seeding time:)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</label>
+                <select id="inactiveSeedingTimeMode">
+                    <option selected value="default">QBT_TR(Default)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                    <option value="unlimited">QBT_TR(Unlimited)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                    <option value="custom">QBT_TR(Set to)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                </select>
+                <input type="number" id="inactiveSeedingTimeValue" step="1" min="0" disabled aria-labelledby="inactiveSeedingTimeLimitLabel">
+                <span>QBT_TR(min)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</span>
+
+                <label for="shareLimitsMode">QBT_TR(Mode:)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</label>
+                <select id="shareLimitsMode" class="shareLimitsWideSelect">
+                    <option selected value="Default">QBT_TR(Default)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                    <option value="MatchAny">QBT_TR(Match any limit)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                    <option value="MatchAll">QBT_TR(Match all the limits)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                </select>
+
+                <div class="shareLimitsActionRow">
+                    <label for="shareLimitAction">QBT_TR(Action when the limit is reached:)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</label>
+                    <select id="shareLimitAction">
+                        <option selected value="Default">QBT_TR(Default)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                        <option value="Stop">QBT_TR(Stop torrent)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                        <option value="Remove">QBT_TR(Remove torrent)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                        <option value="RemoveWithContent">QBT_TR(Remove torrent and its content)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                        <option value="EnableSuperSeeding">QBT_TR(Enable super seeding for torrent)QBT_TR[CONTEXT=TorrentShareLimitsWidget]</option>
+                    </select>
+                </div>
+            </div>
+        </fieldset>
+
+        <div class="checkboxGrid">
+            <div>
+                <input type="checkbox" id="checkDisableDHT">
+                <label for="checkDisableDHT">QBT_TR(Disable DHT for this torrent)QBT_TR[CONTEXT=TorrentOptionsDialog]</label>
+            </div>
+            <div>
+                <input type="checkbox" id="checkSequential">
+                <label for="checkSequential">QBT_TR(Download in sequential order)QBT_TR[CONTEXT=TorrentOptionsDialog]</label>
+            </div>
+            <div>
+                <input type="checkbox" id="checkDisablePEX">
+                <label for="checkDisablePEX">QBT_TR(Disable PeX for this torrent)QBT_TR[CONTEXT=TorrentOptionsDialog]</label>
+            </div>
+            <div>
+                <input type="checkbox" id="checkFirstLastPieces">
+                <label for="checkFirstLastPieces">QBT_TR(Download first and last pieces first)QBT_TR[CONTEXT=TorrentOptionsDialog]</label>
+            </div>
+            <div>
+                <input type="checkbox" id="checkDisableLSD">
+                <label for="checkDisableLSD">QBT_TR(Disable LSD for this torrent)QBT_TR[CONTEXT=TorrentOptionsDialog]</label>
+            </div>
+        </div>
+
+        <div style="text-align: right; padding: 10px 0; border-top: 1px solid var(--color-border-default);">
+            <input type="button" id="saveButton" value="QBT_TR(Save)QBT_TR[CONTEXT=HttpServer]">
+            <input type="button" id="cancelButton" value="QBT_TR(Cancel)QBT_TR[CONTEXT=HttpServer]" style="margin-left: 8px;">
+        </div>
+    </div>
+</body>
+
+</html>
